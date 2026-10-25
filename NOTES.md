@@ -24,6 +24,14 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 02:49 (MobileGestalt Fix Flashed & Booted) <<<
+- **Flash Completed (2026-10-26 02:46):**
+  - Successfully flashed all 24 chunks (11.3 GB) of `ios16-root.simg` containing the pre-seeded `com.apple.MobileGestalt.plist` cache to `userdata` in 350.532s.
+- **Hardware Boot Executed (2026-10-26 02:49):**
+  - Booted `shim/out/shim-boot.img` via fastboot (0.828s).
+  - Boot-args: `debug=0xc serial=3 cpus=4 keepsyms=1 -noprogress rd=ufsroot0 unentitled_ios_sim_launch=1 ignition_level=1 wdt_test=no_user_checkin ufsrw=1 rootrw=1 launchd_unsecure_cache=1 wdt=-1 sweetfb_noconsole=1 sweetfb_hz=30 sweetnull=backboardd,SpringBoard,lsd,datamigrator,containermanagerd sweetsample=lsd,SpringBoard,backboardd,containermanagerd applog_name=lsd,SpringBoard,backboardd,containermanagerd`.
+- **Next concrete action:** Observe transition from Apple boot logo to iOS 16 Lock Screen.
+
 ### >>> UPDATE 2026-10-26 02:40 (MobileGestalt Deadlock Solved & Rootfs Re-flash) <<<
 - **Discovery of Root Cause for Apple Logo Stall:**
   - Pulled persistent ring buffer from boot-6 (`logs/boot-topaz-6.txt`, 109 KB, 31 flushes).
