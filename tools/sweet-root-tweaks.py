@@ -103,6 +103,55 @@ def containers(root):
             print('seeded container', group_id)
 
 
+def mobilegestalt(root):
+    import base64, hashlib
+    def mg_key(name):
+        h = hashlib.md5(('MGCopyAnswer' + name).encode()).digest()
+        return base64.b64encode(h).decode().rstrip('=')
+
+    mg_cache_dir = os.path.join(root, 'private/var/containers/Shared/SystemGroup/systemgroup.com.apple.mobilegestaltcache/Library/Caches')
+    os.makedirs(mg_cache_dir, exist_ok=True)
+    os.chown(mg_cache_dir, MOBILE, MOBILE)
+    os.chmod(mg_cache_dir, 0o777)
+
+    cache_path = os.path.join(mg_cache_dir, 'com.apple.MobileGestalt.plist')
+    extra = {
+        mg_key('ProductType'): 'iPhone10,3',
+        mg_key('HWModelStr'): 'D22AP',
+        mg_key('DeviceClass'): 'iPhone',
+        mg_key('BuildVersion'): BUILD,
+        mg_key('ProductVersion'): VERSION,
+        mg_key('HasHomeButton'): False,
+        mg_key('HomeButtonType'): 2,
+        mg_key('MainScreenScale'): 3.0,
+        mg_key('MainScreenPitch'): 458.0,
+        mg_key('ArtworkTraits'): {
+            'ArtworkScaleFactor': 3,
+            'ArtworkDeviceDisplayGamut': 0,
+            'ArtworkDeviceIdiom': 'phone',
+            'ArtworkDeviceSubtype': 2436,
+        },
+    }
+    payload = {
+        'CacheUUID': '87066E3A-4442-11F1-A14D-F16241AA8750',
+        'CacheVersion': 1,
+        '_kCFSystemVersionBuildVersionKey': BUILD,
+        '_kCFSystemVersionProductVersionKey': VERSION,
+        'CacheExtra': extra,
+        'CacheData': b'',
+    }
+    save(cache_path, payload, MOBILE, MOBILE, 0o644)
+    print('seeded MobileGestalt cache at', cache_path)
+
+    # Also seed in fallback locations
+    for fb_dir in [
+        os.path.join(root, 'private/var/mobile/Library/Caches'),
+        os.path.join(root, 'private/var/mobile/Library/Preferences')
+    ]:
+        os.makedirs(fb_dir, exist_ok=True)
+        save(os.path.join(fb_dir, 'com.apple.MobileGestalt.plist'), payload, MOBILE, MOBILE, 0o644)
+
+
 def find_container(root, kind, identifier):
     for meta in glob.glob(os.path.join(root, 'private/var/containers', kind, '*',
                                        '.com.apple.mobile_container_manager.metadata.plist')):
@@ -189,6 +238,7 @@ def main():
     root = sys.argv[1]
     launchd(root)
     containers(root)
+    mobilegestalt(root)
     activation(root)
     audio(root)
     migration(root)
