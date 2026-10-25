@@ -24,6 +24,24 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 02:40 (MobileGestalt Deadlock Solved & Rootfs Re-flash) <<<
+- **Discovery of Root Cause for Apple Logo Stall:**
+  - Pulled persistent ring buffer from boot-6 (`logs/boot-topaz-6.txt`, 109 KB, 31 flushes).
+  - Symbolicated all threads across samples (sample 0 & sample 1):
+    - `backboardd`, `SpringBoard`, and `lsd` all launched and executed normally. `backboardd` drew the Apple logo (swaps 1–7).
+    - Thread `lsd t2` was deadlocked at `0x19c57c4bc` (`libMobileGestalt.dylib` -> `dispatch_semaphore_wait`).
+    - The asynchronous block at `0x19c57c544` was caught in an infinite loop waiting on `Waiting for IOKit to quiesce` because `com.apple.MobileGestalt.plist` was missing from `/private/var/containers/Shared/SystemGroup/systemgroup.com.apple.mobilegestaltcache/Library/Caches/`.
+    - In an XNU environment without Apple SoC kextd, IOKit never quiesces, permanently blocking `dispatch_semaphore_signal(sem)` and stalling `lsd`.
+- **Permanent Fix Applied:**
+  - Updated `tools/sweet-root-tweaks.py` (commit `22fe3eb`): Added `mobilegestalt()` to synthesize and pre-seed a complete `com.apple.MobileGestalt.plist` cache:
+    - `CacheUUID`: `87066E3A-4442-11F1-A14D-F16241AA8750` (matching `BuildID` from `SystemVersion.plist`).
+    - `CacheVersion`: `1`, `_kCFSystemVersionBuildVersionKey`: `20H392`.
+    - `CacheExtra`: Obfuscated keys for `ProductType` (iPhone10,3), `HWModelStr` (D22AP), `DeviceClass` (iPhone), `ArtworkTraits`, and screen metrics.
+  - Rebuilt sparse rootfs `ios16-root.simg` (12,145,344,824 bytes).
+  - Rebuilt `shim/out/shim-boot.img` with `sweetfb_hz=30` to save 300 MB/s memory bandwidth for UFS I/O.
+  - Rebooted device from recovery to fastboot and initiated flash of `userdata`.
+- **Next concrete action:** Complete flash, manual ABL fastboot re-entry, boot `shim-boot.img`, observe transition to Lock Screen.
+
 ### >>> UPDATE 2026-10-26 02:06 (SystemGroup Rootfs Flashed & Booted) <<<
 - **Flashed Updated Rootfs (2026-10-26 02:04):**
   - Successfully flashed updated `ios16-root.simg` (12,145,344,824 bytes, 24 chunks) to `userdata` in 339.857s.
