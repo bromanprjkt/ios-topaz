@@ -24,6 +24,25 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 01:54 (LaunchServices & SystemGroup Containers Diagnosis & Boot) <<<
+- **Diagnosis of 01:12-01:20 Apple Logo Stall:**
+  - Pulled fresh persistent ring buffer (`logs/boot-topaz-4.txt`, 134 KB, 69 flushes, sample 0..sample 5).
+  - Disassembled `SpringBoard[26]` call stack across all samples (sample 0 to 5 over 11.5 minutes):
+    - Thread 0 was continuously blocked in `__psynch_cvwait` / `_pthread_cond_wait` at `0x240eacc64` (unslid `0x1f0bf8c64`): `-[LSApplicationRecord initWithBundleIdentifier:allowPlaceholder:error:]` called from `ControlCenterServices.framework` (`CCSModuleMetadata`).
+    - SpringBoard was waiting on synchronous XPC reply from `lsd` (LaunchServices daemon).
+    - `lsd` was executed once, accessed AKS and AMFI, but neither crashed nor responded.
+    - LaunchServices requires SystemGroup container `systemgroup.com.apple.lsd` and icon cache `systemgroup.com.apple.lsd.iconscache`, which were missing from `/private/var/containers/Shared/SystemGroup/`.
+- **Changes Applied:**
+  - `tools/sweet-root-tweaks.py` (commit `74aec45`): Pre-seeded `systemgroup.com.apple.lsd`, `systemgroup.com.apple.lsd.iconscache`, `systemgroup.com.apple.mobilegestaltcache`, and `systemgroup.com.apple.installcoordinationd` with `0777` permissions and MCM metadata plists.
+  - Rebuilt boot image `shim/out/shim-boot.img` (17,633,280 bytes) with active diagnostics enabled:
+    `sweetsample=lsd,SpringBoard,backboardd,containermanagerd`
+    `sweetnull=backboardd,SpringBoard,lsd,datamigrator,containermanagerd`
+    `applog=1 applog_name=lsd,SpringBoard,backboardd,containermanagerd`
+    `sweetfb_hz=60`
+  - Rebuilt sparse root image `ios16-root.simg` in background.
+  - Rebooted device from recovery to fastboot and executed `fastboot boot shim/out/shim-boot.img` (0.797s).
+- **Next concrete action:** Observe if device advances from Apple logo to Lock Screen, or if `lsd` reports specific missing dependencies in persistent log.
+
 ### >>> UPDATE 2026-10-26 00:43 (DataMigration IOPlatformUUID Bypass & Boot) <<<
 - **Reflashed full rootfs with v14 tweaks (2026-10-26 01:08):**
   - Successfully rebuilt `ios16-root.simg` (12,145,336,632 bytes) with complete v14 tweaks: ByHost plists (`A9683613-...` & `5C527BDD-...`), `data_ark.plist` seeded with `ActivationState: Activated` and `DataMigrationCompleted: True`, `purplebuddy` `SetupDone: True`.
