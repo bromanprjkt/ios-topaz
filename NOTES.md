@@ -29,6 +29,10 @@
   - Successfully rebuilt `ios16-root.simg` (12,145,336,632 bytes) with complete v14 tweaks: ByHost plists (`A9683613-...` & `5C527BDD-...`), `data_ark.plist` seeded with `ActivationState: Activated` and `DataMigrationCompleted: True`, `purplebuddy` `SetupDone: True`.
   - Successfully flashed all 24/24 chunks (11.3 GB) to `userdata` in 341.485s.
   - Device USB fastboot endpoint hung as expected on Xiaomi ABL after large transfer; awaiting manual re-entry to fastboot.
+- **Hardware boot test on clean v14 rootfs (2026-10-26 01:10):**
+  - Booted `shim/out/shim-boot.img` via fastboot (0.808s) on freshly flashed v14 userdata.
+  - Awaiting GUI presentation on device panel.
+
 
 
 **ROOT CAUSE OF APPLE LOGO STALL IDENTIFIED & RESOLVED:**
