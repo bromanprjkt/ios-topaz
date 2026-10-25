@@ -17,7 +17,11 @@
   - All bring-up tweaks applied via tools/sweet-root-tweaks.py (launchd paniconcrash disabled, CommCenter removed, containers initialized, migration skipped, audio workaround, watchdog disabled, setup skipped, activation seeded).
   - Volume verified clean via fsck.hfsplus -fy.
   - Converted to Android sparse image ios16-root.simg.
-- **Next concrete action:** Boot device in fastboot mode, confirm destructive step with user, flash userdata with fastboot flash -S 512M userdata ios16-root.simg, and boot kernel with fastboot boot shim/out/shim-boot.img.
+- **Hardware boot verified (2026-10-25):**
+  - Flashed 11.3 GB ios16-root.simg (24 chunks) to userdata successfully.
+  - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
+  - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
+- **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
 
 ### >>> UPDATE 2026-10-18 (sweet milestone) <<<
 
