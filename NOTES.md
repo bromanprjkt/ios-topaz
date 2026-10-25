@@ -17,7 +17,9 @@
   - All bring-up tweaks applied via tools/sweet-root-tweaks.py (launchd paniconcrash disabled, CommCenter removed, containers initialized, migration skipped, audio workaround, watchdog disabled, setup skipped, activation seeded).
   - Volume verified clean via fsck.hfsplus -fy.
   - Converted to Android sparse image ios16-root.simg.
-- **Hardware boot verified (2026-10-25):**
+- **Hardware boot verified (2026-10-25 / 2026-10-26 00:24):**
+  - Reflashed rootfs with DataMigration ByHost plists seeded and mobileactivationd data ark container initialized.
+  - Successfully booted shim/out/shim-boot.img via fastboot boot (0.81s).
   - Flashed 11.3 GB ios16-root.simg (24 chunks) to userdata successfully.
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.

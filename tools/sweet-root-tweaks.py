@@ -14,7 +14,7 @@ screen (image versions v8-v14 in NOTES.md):
                   crash-loops and Setup blocks on its CoreTelephony XPC)
   containers      /private/var/containers/{Bundle,Data/System,Shared/SystemGroup,Temp}
                   (on iOS they live on the data volume)
-  migration       LastSystemVersion so DataMigration does not run for an hour
+  migration       LastSystemVersion so DataMigration does not run for an hou
                   on every boot
   audio           VirtualAudio HAL plug-in disabled (mediaserverd crash)
   MediaToolbox    StartRecorderServer=false (camera filter prewarm calls a
@@ -93,8 +93,14 @@ def find_container(root, kind, identifier):
 def activation(root):
     c = find_container(root, 'Data/System', 'com.apple.mobileactivationd')
     if c is None:
-        print('warning: no mobileactivationd system container in the image; skipped data ark')
-        return
+        c = os.path.join(root, 'private/var/containers/Data/System/D90C94C4-F94E-4FCF-8A28-A93BE3846D8E')
+        os.makedirs(c, exist_ok=True)
+        os.chown(c, 0, 0)
+        os.chmod(c, 0o755)
+        save(os.path.join(c, '.com.apple.mobile_container_manager.metadata.plist'), {
+            'MCMMetadataIdentifier': 'com.apple.mobileactivationd',
+            'MCMMetadataUUID': 'D90C94C4-F94E-4FCF-8A28-A93BE3846D8E',
+        }, 0, 0, 0o644)
     d = os.path.join(c, 'Library/internal')
     os.makedirs(d, exist_ok=True)
     os.chown(d, MOBILE, MOBILE)
@@ -104,7 +110,7 @@ def activation(root):
         '-BuildVersion': BUILD, '-ProductVersion': VERSION,
         '-DataMigrationCompleted': True, '-PreSydroDataMigrationCompleted': True,
     }, MOBILE, MOBILE, 0o600)
-    print('data ark', d)
+    print('data ark seeded in', d)
 
 
 def audio(root):
@@ -122,6 +128,38 @@ def audio(root):
         print('StartRecorderServer off', os.path.relpath(conf, root))
 
 
+def migration(root):
+    uuids = [
+        'A9683613-3704-53F2-95D0-98A8FB574E78',
+        'a9683613-3704-53f2-95d0-98a8fb574e78',
+    ]
+    mig_payload = {
+        'LastSystemVersion': BUILD,
+        'DMUserDataDisposition': {'SyntheticDidUpgrade': False, 'buildVersion': BUILD}
+    }
+    dm_payload = {'LastSystemVersion': BUILD}
+
+    for user_dir, uid in [('private/var/mobile', MOBILE), ('private/var/root', 0)]:
+        pref_dir = os.path.join(root, user_dir, 'Library/Preferences')
+        byhost_dir = os.path.join(pref_dir, 'ByHost')
+        os.makedirs(byhost_dir, exist_ok=True)
+        os.chown(byhost_dir, uid, uid)
+        os.chmod(byhost_dir, 0o755)
+
+        save(os.path.join(pref_dir, 'com.apple.migration.plist'), mig_payload, uid, uid, 0o600)
+        save(os.path.join(pref_dir, 'com.apple.DataMigration.plist'), dm_payload, uid, uid, 0o600)
+
+        for u in uuids:
+            save(os.path.join(byhost_dir, f'com.apple.migration.{u}.plist'), mig_payload, uid, uid, 0o600)
+            save(os.path.join(byhost_dir, f'com.apple.DataMigration.{u}.plist'), dm_payload, uid, uid, 0o600)
+
+    sentinel = os.path.join(root, 'private/var/datamigrator/migrate')
+    if os.path.exists(sentinel):
+        os.remove(sentinel)
+        print('removed migration sentinel')
+    print('migration preferences and ByHost populated')
+
+
 def main():
     if len(sys.argv) != 2 or not os.path.isdir(os.path.join(sys.argv[1], 'System/Library/xpc')):
         sys.exit(__doc__)
@@ -130,9 +168,7 @@ def main():
     containers(root)
     activation(root)
     audio(root)
-    merge_pref(root, 'com.apple.migration', {
-        'LastSystemVersion': BUILD,
-        'DMUserDataDisposition': {'SyntheticDidUpgrade': False, 'buildVersion': BUILD}})
+    migration(root)
     merge_pref(root, 'com.apple.springboard', {
         'BKNoWatchdogs': True,
         'FBLaunchWatchdogExceptions': {'com.apple.purplebuddy': 100.0},
