@@ -81,6 +81,27 @@ def containers(root):
             os.chmod(d, 0o755)
             print('mkdir', d)
 
+    sg_base = os.path.join(base, 'Shared/SystemGroup')
+    for group_id in (
+        'systemgroup.com.apple.lsd',
+        'systemgroup.com.apple.lsd.iconscache',
+        'systemgroup.com.apple.mobilegestaltcache',
+        'systemgroup.com.apple.installcoordinationd',
+    ):
+        grp_dir = os.path.join(sg_base, group_id)
+        for sub_dir in ('', 'Library', 'Library/Caches', 'Library/Preferences'):
+            p = os.path.join(grp_dir, sub_dir)
+            os.makedirs(p, exist_ok=True)
+            os.chown(p, MOBILE, MOBILE)
+            os.chmod(p, 0o777)
+        meta_file = os.path.join(grp_dir, '.com.apple.mobile_container_manager.metadata.plist')
+        if not os.path.exists(meta_file):
+            save(meta_file, {
+                'MCMMetadataIdentifier': group_id,
+                'MCMMetadataUUID': group_id,
+            }, 0, 0, 0o644)
+            print('seeded container', group_id)
+
 
 def find_container(root, kind, identifier):
     for meta in glob.glob(os.path.join(root, 'private/var/containers', kind, '*',
