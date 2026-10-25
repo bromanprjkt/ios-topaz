@@ -25,6 +25,11 @@
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
 ### >>> UPDATE 2026-10-26 00:43 (DataMigration IOPlatformUUID Bypass & Boot) <<<
+- **Reflashed full rootfs with v14 tweaks (2026-10-26 01:08):**
+  - Successfully rebuilt `ios16-root.simg` (12,145,336,632 bytes) with complete v14 tweaks: ByHost plists (`A9683613-...` & `5C527BDD-...`), `data_ark.plist` seeded with `ActivationState: Activated` and `DataMigrationCompleted: True`, `purplebuddy` `SetupDone: True`.
+  - Successfully flashed all 24/24 chunks (11.3 GB) to `userdata` in 341.485s.
+  - Device USB fastboot endpoint hung as expected on Xiaomi ABL after large transfer; awaiting manual re-entry to fastboot.
+
 
 **ROOT CAUSE OF APPLE LOGO STALL IDENTIFIED & RESOLVED:**
 - **Problem:** Device booted and showed Apple logo continuously for >4 minutes without advancing to SpringBoard.
