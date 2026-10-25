@@ -24,6 +24,16 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 02:06 (SystemGroup Rootfs Flashed & Booted) <<<
+- **Flashed Updated Rootfs (2026-10-26 02:04):**
+  - Successfully flashed updated `ios16-root.simg` (12,145,344,824 bytes, 24 chunks) to `userdata` in 339.857s.
+  - Image includes seeded SystemGroup containers: `systemgroup.com.apple.lsd`, `systemgroup.com.apple.lsd.iconscache`, `systemgroup.com.apple.mobilegestaltcache`, `systemgroup.com.apple.installcoordinationd`.
+  - User re-entered fastboot manually to clear the ABL USB transfer hang.
+- **Hardware Boot Executed (2026-10-26 02:06):**
+  - Booted `shim/out/shim-boot.img` via fastboot (0.788s).
+  - Cmdline: `debug=0xc serial=3 cpus=4 keepsyms=1 -noprogress rd=ufsroot0 unentitled_ios_sim_launch=1 ignition_level=1 wdt_test=no_user_checkin ufsrw=1 rootrw=1 launchd_unsecure_cache=1 wdt=-1 sweetfb_noconsole=1 sweetfb_hz=60 sweetnull=backboardd,SpringBoard,lsd,datamigrator,containermanagerd sweetsample=lsd,SpringBoard,backboardd,containermanagerd applog=1 applog_name=lsd,SpringBoard,backboardd,containermanagerd`.
+- **Next concrete action:** Observe transition from Apple logo to Lock Screen / Home Screen.
+
 ### >>> UPDATE 2026-10-26 01:54 (LaunchServices & SystemGroup Containers Diagnosis & Boot) <<<
 - **Diagnosis of 01:12-01:20 Apple Logo Stall:**
   - Pulled fresh persistent ring buffer (`logs/boot-topaz-4.txt`, 134 KB, 69 flushes, sample 0..sample 5).
