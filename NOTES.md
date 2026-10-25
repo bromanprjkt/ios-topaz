@@ -1,8 +1,25 @@
 # iOS 16 on sweet (Redmi Note 10 Pro, SM7150) - working notes
 
-## Agent handoff / active work (2026-10-15, latest)
+## Agent handoff / active work (2026-10-25, latest)
 
-### >>> UPDATE 2026-10-18 (read first, then the 10-17 handoff below) <<<
+### >>> UPDATE 2026-10-25 (Topaz bring-up preparation complete) <<<
+
+**TOPAZ BRING-UP ARTIFACTS FULLY PREPARED:**
+- **Target:** Xiaomi Redmi Note 12 4G (topaz / tapas, Snapdragon 685 / SM6225).
+- **IPSW:** iPhone10,3,iPhone10,6_16.7.16_20H392_Restore.ipsw (iOS 16.7.16, build 20H392).
+- **ADT generated:** shim/out/topaz.adt (9,688 bytes) generated from decompressed research/ipsw-x/d22ap.adt via tools/mkadt.py --highmem.
+- **Kernel built:** XNU kernel (xnu/out/kernel.development.sweet, 17.18 MB) built via GitHub Actions (SWEET target patched for SM6225 / Cortex-A73 / FocalTech / Adreno 610).
+- **Boot shim built:** shim/out/shim-boot.img (17,633,280 bytes) generated with aarch64-linux-gnu-gcc and mkbootimg.
+- **WSL2 HFS+ environment:** Custom WSL2 kernel 6.18.33.2-microsoft-standard-WSL2+ compiled with CONFIG_HFSPLUS_FS=y and installed to C:\Users\pinkman\vmlinux-hfs.
+- **Root filesystem sparse image:** ios16-root.simg (12,145,172,764 bytes) generated via tools/build_root_topaz.sh:
+  - OS.dmg + SystemOS.dmg + AppOS.dmg transferred to 16 GB HFS+ volume (iOSRoot) via apfs-fuse.
+  - dyld shared cache hardlinked to /System/Library/Caches/com.apple.dyld.
+  - All bring-up tweaks applied via tools/sweet-root-tweaks.py (launchd paniconcrash disabled, CommCenter removed, containers initialized, migration skipped, audio workaround, watchdog disabled, setup skipped, activation seeded).
+  - Volume verified clean via fsck.hfsplus -fy.
+  - Converted to Android sparse image ios16-root.simg.
+- **Next concrete action:** Boot device in fastboot mode, confirm destructive step with user, flash userdata with fastboot flash -S 512M userdata ios16-root.simg, and boot kernel with fastboot boot shim/out/shim-boot.img.
+
+### >>> UPDATE 2026-10-18 (sweet milestone) <<<
 
 **LIVE LOG over USB (0077, boot 0077s): no more recovery round-trips.** Boot an image with `sweetusb=2`, run `tools/sweet-usbnet.sh logs/live-NAME.txt` on the PC: it waits for the phone's CDC-ECM interface, sets 192.168.7.1/24 (sudo) and prints/saves the kernel console the phone streams every 100 ms as UDP to 192.168.7.1:5140 (starts with the last 64 KiB). `ping 192.168.7.2` checks the link. Current image: `shim/out/shim-boot-0077s.img` (kernel 0077, ADT sweet-0069hi, cpus=6, sweetfb_noconsole=1, sweetfb_hz=30, sweetusb=2). The recovery pull (`tools/sweet-log-pull.sh`) is still the way after a panic/hang before USB comes up.
 
