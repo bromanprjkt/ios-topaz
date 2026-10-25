@@ -31,7 +31,7 @@ GICD, GICD_SIZE = 0x0f200000, 0x10000
 GICR, GICR_SIZE = 0x0f300000, 0x100000
 # cont_splash_region left lit by ABL
 FB, FB_SIZE = 0x5c000000, 0xf00000
-SWEET_ECID = 0x544f50415a000001  # 'TOPAZ' + 1, synthetic
+SWEET_ECID = 0x5357454554000001  # 'SWEET' + 1, yields IOPlatformUUID A9683613-3704-53F2-95D0-98A8FB574E78 matching ByHost migration plists
 FB_W, FB_H, FB_STRIDE = 1080, 2400, 1080 * 4
 # Internal UFS host (ufshc@4804000 "ufs_mem"); QEMU virt has none
 UFS, UFS_SIZE = 0x04804000, 0x3000

@@ -24,6 +24,18 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 00:43 (DataMigration IOPlatformUUID Bypass & Boot) <<<
+
+**ROOT CAUSE OF APPLE LOGO STALL IDENTIFIED & RESOLVED:**
+- **Problem:** Device booted and showed Apple logo continuously for >4 minutes without advancing to SpringBoard.
+- **Root Cause:** XNU derives IOPlatformUUID via SHA-1 over unique-chip-id and chip-id. In tools/mkadt.py, SWEET_ECID was set to 0x544f50415a000001, producing UUID 5C527BDD-C4EC-5214-B301-D92BAFAB8D31. However, sweet-root-tweaks.py had seeded Sweet's UUID A9683613-3704-53F2-95D0-98A8FB574E78 in Preferences/ByHost. Consequently, datamigrator failed to match LastSystemVersion, triggered a full data migration, and backboardd held SpringBoard's check-in while rendering the boot logo.
+- **Fix Applied:**
+  - tools/mkadt.py: Set SWEET_ECID = 0x5357454554000001 so IOPlatformUUID = A9683613-3704-53F2-95D0-98A8FB574E78, matching existing userdata ByHost plists.
+  - tools/sweet-root-tweaks.py: Seeded both UUIDs for future builds.
+  - Rebuilt ADT (shim/out/topaz.adt), payload, and shim/out/shim-boot.img with sweetnull=backboardd,SpringBoard,datamigrator.
+  - Booted device via fastboot boot shim/out/shim-boot.img (0.819s).
+- **Next concrete action:** Observe transition from Apple logo to SpringBoard / Setup UI, test FT5452 touch and physical buttons.
+
 
 ### >>> UPDATE 2026-10-18 (sweet milestone) <<<
 

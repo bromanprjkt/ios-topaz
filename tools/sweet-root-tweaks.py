@@ -132,6 +132,8 @@ def migration(root):
     uuids = [
         'A9683613-3704-53F2-95D0-98A8FB574E78',
         'a9683613-3704-53f2-95d0-98a8fb574e78',
+        '5C527BDD-C4EC-5214-B301-D92BAFAB8D31',
+        '5c527bdd-c4ec-5214-b301-d92bafab8d31',
     ]
     mig_payload = {
         'LastSystemVersion': BUILD,
