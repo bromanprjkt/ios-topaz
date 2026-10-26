@@ -24,6 +24,18 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 10:19 (Diagnosis of sweetbl Drop & Rebuilt Clean Image) <<<
+- **Diagnosis of Severe Frame Drop with `sweetbl=1`:**
+  - Per patch `0110-topaz-backlight-optin.patch`, registering `AppleARMBacklight` activates `CoreBrightness` digital dimming:
+    "with a backlight service CoreBrightness also runs digital dimming, a colour filter over every frame, which the CPU renderer cannot afford (the UI dropped to under 1 fps)."
+  - In CPU software rendering without GPU acceleration, processing a color filter on 11 MB per frame severely tanks framerate.
+- **Action Taken:**
+  - Rebuilt clean payload and boot image without `sweetbl=1`:
+    `shim/out/shim-boot-fast.img` (copied to `shim/out/shim-boot.img`) with:
+    `sweetfb_hz=30 sweettouchdelay=2 sweettouchirq=0`
+  - Eliminates CoreBrightness software pixel filtering overhead.
+- **Next concrete action:** User reboots device to fastboot (Power + Vol Down) and boots `shim/out/shim-boot.img`.
+
 ### >>> UPDATE 2026-10-26 10:16 (Hardware Boot Option A Executed) <<<
 - **Hardware Boot Option A (`shim/out/shim-boot-opt-a.img`):**
   - Booted device `86104b48` via fastboot boot (0.812s).
