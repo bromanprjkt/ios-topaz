@@ -24,6 +24,12 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 10:16 (Hardware Boot Option A Executed) <<<
+- **Hardware Boot Option A (`shim/out/shim-boot-opt-a.img`):**
+  - Booted device `86104b48` via fastboot boot (0.812s).
+  - Boot args: `sweetfb_hz=30 sweetbl=1 sweettouchdelay=2 sweettouchirq=0`.
+  - Awaiting user observation on Lock Screen / SpringBoard for brightness slider control and frame rate smoothness.
+
 ### >>> UPDATE 2026-10-26 10:13 (Option A Prepared: Locked 30 FPS + Backlight Brightness) <<<
 - **Option A Boot Image Built & Deployed to `shim/out/shim-boot.img`:**
   - `sweetfb_hz=30`: Frame presentation locked at consistent 33.3 ms intervals, eliminating fluctuating frame pacing drops and hitching seen at 60 Hz software rendering.
