@@ -50,7 +50,7 @@ new file mode 100644
 index 0000000..e2674ee
 --- /dev/null
 +++ b/bsd/dev/redwood_apple80211.c
-@@ -0,0 +1,739 @@
+@@ -0,0 +1,764 @@
 +/*
 + * Darwin-on-redwood: Apple80211, answered in the kernel.
 + *
@@ -438,6 +438,30 @@ index 0000000..e2674ee
 +		kfree_data(bss, sizeof(*bss));
 +		return error;
 +	}
++	case 29: {                              /* DEAUTH reason/status (16 bytes) */
++		uint8_t zero[16] = { 0 };
++		return give(request, zero, sizeof(zero));
++	}
++	case 51: {                              /* COUNTRY_CODE (3 bytes) */
++		const char cc[4] = "00";
++		return give(request, cc, request->req_len < 4 ? request->req_len : 4);
++	}
++	case 14: {                              /* PHY_MODE (12 bytes) */
++		struct {
++			uint32_t version;
++			uint32_t active;
++			uint32_t supported;
++		} answer = { .version = 1, .active = 8 /* 11n */, .supported = 0x3f };
++		return give(request, &answer, sizeof(answer));
++	}
++	case 17: {                              /* NOISE (same layout as RSSI 16) */
++		struct {
++			uint32_t version, radios, unit;
++			int32_t each[4], all, each_ext[4], all_ext;
++		} answer = { .version = 1, .radios = 1, .each = { -95 }, .all = -95,
++			     .each_ext = { -95 }, .all_ext = -95 };
++		return give(request, &answer, sizeof(answer));
++	}
 +	default:
 +		break;
 +	}
@@ -643,7 +667,8 @@ index 0000000..e2674ee
 +	case 10:
 +		return set_scan(request, said, said_size);
 +	default:
-+		return EOPNOTSUPP;
++		/* accept & ignore unknown set requests (e.g. 422, 365, 383, 25, 51) so wifid doesn't abort */
++		return 0;
 +	}
 +}
 +
@@ -795,7 +820,7 @@ new file mode 100644
 index 0000000..e7b46fd
 --- /dev/null
 +++ b/bsd/dev/redwood_net.c
-@@ -0,0 +1,376 @@
+@@ -0,0 +1,382 @@
 +/*
 + * en0: a network interface that is Ethernet as far as the rest of the kernel and iOS can tell.
 + *
@@ -998,11 +1023,11 @@ index 0000000..e7b46fd
 +	}
 +	switch (command) {
 +	case SIOCSIFADDR:
-+		ifnet_set_flags(ifp, IFF_UP, IFF_UP);
++		ifnet_set_flags(ifp, IFF_UP | (net_link_up ? IFF_RUNNING : 0), IFF_UP | IFF_RUNNING);
 +		break;
 +	case SIOCSIFFLAGS:
-+		/* running whenever it is up: the link is there or it is not, nothing is switched on */
-+		ifnet_set_flags(ifp, (ifnet_flags(ifp) & IFF_UP) ? IFF_RUNNING : 0, IFF_RUNNING);
++		/* running whenever it is up and the link is active */
++		ifnet_set_flags(ifp, ((ifnet_flags(ifp) & IFF_UP) && net_link_up) ? IFF_RUNNING : 0, IFF_RUNNING);
 +		break;
 +	case SIOCGIFMEDIA32:
 +	case SIOCGIFMEDIA64:
@@ -1063,7 +1088,13 @@ index 0000000..e7b46fd
 +	}
 +	net_link_up = up;
 +	printf("net: the link (%s) is %s\n", net_link->name, up ? "up" : "down");
-+	net_link_event(net_ifp, up ? KEV_DL_LINK_ON : KEV_DL_LINK_OFF);
++	if (up) {
++		ifnet_set_flags(net_ifp, IFF_UP | IFF_RUNNING, IFF_UP | IFF_RUNNING);
++		net_link_event(net_ifp, KEV_DL_LINK_ON);
++	} else {
++		ifnet_set_flags(net_ifp, 0, IFF_RUNNING);
++		net_link_event(net_ifp, KEV_DL_LINK_OFF);
++	}
 +}
 +
 +/* The interface's own thread: for a link that wants to be asked, and for the minute's line in the log. */
@@ -1136,7 +1167,7 @@ index 0000000..e7b46fd
 +	ifnet_set_addrlen(ifp, ETHER_ADDR_LEN);
 +	ifnet_set_baudrate(ifp, 100 * 1000 * 1000);
 +	ifnet_set_mtu(ifp, ETHERMTU);
-+	ifnet_set_flags(ifp, IFF_BROADCAST | IFF_MULTICAST | IFF_SIMPLEX, 0xffff);
++	ifnet_set_flags(ifp, IFF_UP | IFF_BROADCAST | IFF_MULTICAST | IFF_SIMPLEX, 0xffff);
 +	ifnet_set_hdrlen(ifp, ETHER_HDR_LEN);
 +	ifnet_set_offload(ifp, 0);
 +	error = ifnet_attach(ifp, NULL);
@@ -2085,9 +2116,9 @@ index 0000000..081fd35
 +	static unsigned said;
 +
 +	if (said++ < 4) {
-+		IOLog("MiniIONetworkStack: asked to name an interface: there are none of that kind\n");
++		IOLog("MiniIONetworkStack: asked to name an interface\n");
 +	}
-+	return kIOReturnUnsupported;
++	return kIOReturnSuccess;
 +}
 +
 +/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
