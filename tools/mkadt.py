@@ -218,7 +218,11 @@ def build(seed=None, qemu=False, highmem=False, native=False, midmem=False):
     # An absent pmap-max-asids property selects XNU's own MAX_ASIDS default.
     # No effaceable storage: keybagd then reads /private/var/keybags/systembag.kb
     # as a plain plist instead of decrypting it with the effaceable key.
-    defaults = node('defaults', [ph(), ('no-effaceable-storage', u32(1))])
+    defaults = node('defaults', [
+        ph(),
+        ('no-effaceable-storage', u32(1)),
+        ('vmm-present', u32(1)),
+    ])
 
     # MobileGestalt HomeButtonType = IODeviceTree:/buttons home-button-type
     # (D22AP: 2, no Home button; absent = 0 = Home-button device).
