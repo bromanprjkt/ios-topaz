@@ -24,6 +24,21 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 08:56 (Touch Raw Register Diagnostic Boot on Topaz) <<<
+- **Diagnosis of Boot 9 (logs/boot-topaz-9.txt, 270 KB, 45 flushes):**
+  - Driver started immediately at 2s (`sweettouchdelay=2`) and polled at 100 Hz (`sweettouchirq=0`).
+  - Probed successfully at 0x38 (`chip-id=54:52`).
+  - `touch_read(0x38, 0, false, buf, 63)` returned `err=0` every cycle, but touch events were never emitted (points count `n` remained 0 or idle).
+  - Verified live device tree in OrangeFox recovery:
+    - Node `pinctrl@400000` is `qcom,khaje-pinctrl`.
+    - Pins 80 (IRQ), 86 (RESET), and 36 (AVDD) belong to `1-0038` (`focaltech@38`).
+    - In `pinctrl-khaje.c`, pin 80 is confirmed in tile WEST.
+- **Action Taken:**
+  - Rebuilt `shim/out/payload.bin` and `shim/out/shim-boot.img` with `sweettouchdiag=2` enabled.
+  - At 30s into boot (3000 polls), kernel will panic and capture full diagnostic stats (`s_frames`, `s_errs`, `s_maxn`, and raw `s_raw[0..11]` byte dump).
+  - Booted to hardware via `fastboot boot shim/out/shim-boot.img` (0.805s).
+- **Next concrete action:** User interacts with screen for 25s, reboot to recovery, and pull `boot-topaz-10.txt` to inspect FT5452 raw byte contents.
+
 ### >>> UPDATE 2026-10-26 08:40 (Touch Responsiveness & Polling Optimization on Topaz) <<<
 - **Diagnosis of Boot 8 Ring Buffer (logs/boot-topaz-8.txt, 450 KB, 275 flushes):**
   - Pulled `logs/ring-raw-8.bin` via OrangeFox recovery and decoded to `logs/boot-topaz-8.txt`.
