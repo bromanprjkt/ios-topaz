@@ -216,7 +216,7 @@ diff --git a/bsd/sweet_hfs/sweet_hfs_iokit.c b/bsd/sweet_hfs/sweet_hfs_iokit.c
 new file mode 100644
 --- /dev/null
 +++ b/bsd/sweet_hfs/sweet_hfs_iokit.c
-@@ -0,0 +1,177 @@
+@@ -0,0 +1,180 @@
 +/*
 + * Built-in replacement for HFS's IOKit glue (core/hfs_iokit.cpp and
 + * hfs_encodings/hfs_encodings_kext.cpp) on SWEET.
@@ -299,6 +299,7 @@ new file mode 100644
 +extern struct vnodeopv_desc hfs_specop_opv_desc;
 +extern struct vnodeopv_desc hfs_fifoop_opv_desc;
 +extern struct vfsops hfs_vfsops;
++static struct vfsops sweet_vfsops;
 +
 +void sweet_hfs_register(void);
 +
@@ -330,8 +331,11 @@ new file mode 100644
 +#define VFS_TBLVNOP_SECLUDE_RENAME 0
 +#endif
 +
++	sweet_vfsops = hfs_vfsops;
++	sweet_vfsops.vfs_getattr = sweet_hfs_vfs_getattr;
++
 +	struct vfs_fsentry vfe = {
-+		.vfe_vfsops = &hfs_vfsops,
++		.vfe_vfsops = &sweet_vfsops,
 +		.vfe_vopcnt = sizeof(op_descs) / sizeof(op_descs[0]),
 +		.vfe_opvdescs = op_descs,
 +		.vfe_fsname = "hfs",
@@ -341,7 +345,6 @@ new file mode 100644
 +		    | VFS_TBLNATIVEXATTR)
 +	};
 +
-+	hfs_vfsops.vfs_getattr = sweet_hfs_vfs_getattr;
 +	int ret = vfs_fsadd(&vfe, &sweet_hfs_vfs_handle);
 +	if (ret) {
 +		panic("SWEET HFS: vfs_fsadd failed: %d", ret);
