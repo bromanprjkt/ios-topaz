@@ -24,6 +24,17 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 10:46 (🎉 CI Build 40264964304 Succeeded & Booted with modem_b Wi-Fi) <<<
+- **GitHub Actions Kernel Build 40264964304:**
+  - Completed successfully in 5m19s.
+  - Downloaded `xnu-kernel` artifact (`xnu/out/kernel.development.sweet`, 18,019,288 bytes).
+  - Contains patch `0115` updated with exact offsets, segment sizes, and CRCs for `modem_b`.
+- **Boot Image Built & Hardware Boot Executed:**
+  - Built `shim/out/payload-wifi.bin` and `shim/out/shim-boot.img` with:
+    `sweetfb_hz=30 sweettouchdelay=2 sweettouchirq=0 modem=1 wifi=1 modem_part=modem_b`
+  - Rebooted device from recovery to fastboot and booted via `fastboot boot` (0.810s).
+- **Next concrete action:** User tests Wi-Fi enable switch in Control Center / Settings, verifies whether SSID scanning or `en0` comes online.
+
 ### >>> UPDATE 2026-10-26 10:36 (Patch 0115 Updated for modem_b & CI Dispatched) <<<
 - **Patch 0115 Updated for Slot B / `modem_b`:**
   - Partition target changed from `modem_a` to `modem_b`.
