@@ -24,6 +24,15 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 10:13 (Option A Prepared: Locked 30 FPS + Backlight Brightness) <<<
+- **Option A Boot Image Built & Deployed to `shim/out/shim-boot.img`:**
+  - `sweetfb_hz=30`: Frame presentation locked at consistent 33.3 ms intervals, eliminating fluctuating frame pacing drops and hitching seen at 60 Hz software rendering.
+  - `sweetbl=1`: Published `AppleARMBacklight` service so iOS `CoreBrightness` can control panel brightness over DSI DCS `0x51`.
+  - `sweettouchdelay=2 sweettouchirq=0`: Preserved verified FT3519T touchscreen protocol decoder.
+  - Modem/Wi-Fi background loop omitted from this image to minimize boot overhead.
+  - Image generated: `shim/out/shim-boot-opt-a.img` (17,633,280 bytes) and active `shim/out/shim-boot.img`.
+- **Next concrete action:** Boot Option A image via `fastboot boot shim/out/shim-boot.img` and test UI smoothness and brightness slider.
+
 ### >>> UPDATE 2026-10-26 10:00 (60 Hz + Wi-Fi Boot Image Prepared) <<<
 - **Wi-Fi Subsystem (WCN3988) Integrated into Boot Image:**
   - Patches `0113`/`0115` boot the Hexagon modem DSP (MPSS) using TrustZone PAS with firmware loaded read-only from internal UFS `modem_a`.
