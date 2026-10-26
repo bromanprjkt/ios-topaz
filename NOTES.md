@@ -24,6 +24,20 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 10:32 (Modem Partition & Preferences Crash Diagnosis via Recovery) <<<
+- **Recovery Diagnostics via ADB (`logs/boot-topaz-12.txt`, 270 KB):**
+  1. **Settings > General > About Crash Root Cause:**
+     - Captured `CRASH Preferences[336] sig 5 code 0x600000001` (SIGTRAP / Swift force-unwrap trap).
+     - PC: `0x21c5bfda8` (unslid `0x1cdc47da8`), inside `PodcastsUI func_1cdc47c58`.
+     - Fails on force-unwrap of `URL.volumeTotalCapacity` (returns `nil` on HFS+ root filesystem instead of APFS).
+  2. **Wi-Fi / Modem Subsystem Root Cause Identified:**
+     - Device is active on **Slot B** (`ro.boot.slot_suffix: _b`).
+     - On internal UFS, `modem_a` is unformatted/empty, while `modem_b` contains the complete intact Qualcomm NON-HLOS FAT16 volume.
+     - Hardcoded table in patch `0115` defaulted to `modem_a` and had minor segment size mismatches (`modem.b18` is `0x2d29f9` vs hardcoded `0x2d29a9`; `modem.b25` is `0x77941` vs `0x77a45`).
+     - Mismatched sizes caused `got != ph[i].p_filesz` -> `goto shutdown`, preventing TrustZone PIL PAS boot.
+     - Extracted exact FAT16 cluster offsets and CRCs for all 28 files from `modem_b`.
+- **Next concrete action:** Patch `xnu/patches/0115-topaz-modem-fw-from-modem-a.patch` with exact `modem_b` table and build fresh kernel via GitHub Actions, or test with boot-arg `modem_part=modem_b`.
+
 ### >>> UPDATE 2026-10-26 10:19 (Diagnosis of sweetbl Drop & Rebuilt Clean Image) <<<
 - **Diagnosis of Severe Frame Drop with `sweetbl=1`:**
   - Per patch `0110-topaz-backlight-optin.patch`, registering `AppleARMBacklight` activates `CoreBrightness` digital dimming:
