@@ -24,6 +24,23 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 07:42 (MobileGestalt IOKit Quiesce Bypass via ADT vmm-present) <<<
+- **Diagnosis of 02:49-07:06 Stall (boot-topaz-7.txt, 133 KB, 52 flushes):**
+  - Pulled ring buffer `logs/ring-raw-7.bin` and decoded to `logs/boot-topaz-7.txt`.
+  - Disassembled and symbolicated threads across all 4 samples (sample 0..3):
+    - `backboardd` is active and receiving HID button events (SWEET HID client connected).
+    - `SpringBoard[26]` thread 0 is synchronously waiting on XPC reply from `lsd` (`ControlCenterServices` -> `-[LSApplicationRecord initWithBundleIdentifier:allowPlaceholder:error:]`).
+    - `lsd[100]` thread 1 is blocked in `libMobileGestalt.dylib` at `0x19c57c4bc` (`dispatch_semaphore_wait`).
+    - Reverse engineering of `libMobileGestalt.dylib` revealed that `_rebuildCache` spins forever in `CFRunLoopRunInMode` at `0x19c57c544` waiting for IOKit quiesce notification.
+    - Crucial discovery: At `0x19c571764`, `libMobileGestalt.dylib` calls `is_vmm_present()` which checks sysctl `kern.hv_vmm_present`. If non-zero, it takes `tbnz w0, #0, 0x19c571700` and completely skips `rebuildCache()`.
+    - Reverse engineering of XNU (`kernel.development.sweet`) revealed sysctl `kern.hv_vmm_present` is backed by `PE_get_default("vmm-present", &val, sizeof(val))`, populated directly from `/defaults/vmm-present` in the ADT.
+- **Fix Applied (Commit `a59cc52`):**
+  - Updated `tools/mkadt.py`: Added `('vmm-present', u32(1))` to the `/defaults` node.
+  - Rebuilt ADT `shim/out/topaz.adt` (9,728 bytes).
+  - Rebuilt `shim/out/payload.bin` and boot image `shim/out/shim-boot.img` (17,633,280 bytes).
+  - Rebooted device from recovery to fastboot and executed `fastboot boot shim/out/shim-boot.img` (0.817s).
+- **Next concrete action:** Observe transition from Apple logo to Lock Screen as `lsd` bypasses cache rebuild deadlock.
+
 ### >>> UPDATE 2026-10-26 02:49 (MobileGestalt Fix Flashed & Booted) <<<
 - **Flash Completed (2026-10-26 02:46):**
   - Successfully flashed all 24 chunks (11.3 GB) of `ios16-root.simg` containing the pre-seeded `com.apple.MobileGestalt.plist` cache to `userdata` in 350.532s.
