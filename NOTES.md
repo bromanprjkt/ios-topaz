@@ -24,6 +24,14 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 07:45 (🎉🎉 MILESTONE: iOS 16 BOOTS TO SPRINGBOARD / LOCK SCREEN ON TOPAZ) <<<
+- **Hardware Boot Success Verified (2026-10-26 07:45):**
+  - Device booted via `fastboot boot shim/out/shim-boot.img` with `/defaults/vmm-present` enabled in ADT (commit `a59cc52`).
+  - MobileGestalt IOKit quiesce deadlock bypassed cleanly.
+  - Apple logo dismissed, SpringBoard transitioned successfully to Lock Screen / GUI!
+  - User confirmed hardware GUI booted and active on device panel.
+- **Next concrete action:** Record boot video documentation, verify touch responsiveness (FT5452), hardware keys, and SpringBoard UI navigation.
+
 ### >>> UPDATE 2026-10-26 07:42 (MobileGestalt IOKit Quiesce Bypass via ADT vmm-present) <<<
 - **Diagnosis of 02:49-07:06 Stall (boot-topaz-7.txt, 133 KB, 52 flushes):**
   - Pulled ring buffer `logs/ring-raw-7.bin` and decoded to `logs/boot-topaz-7.txt`.
