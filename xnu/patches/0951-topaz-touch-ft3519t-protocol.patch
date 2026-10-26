@@ -1,0 +1,99 @@
+diff --git a/bsd/dev/sweet_touch.c b/bsd/dev/sweet_touch.c
+index 3a5e137..9e6432e 100644
+--- a/bsd/dev/sweet_touch.c
++++ b/bsd/dev/sweet_touch.c
+@@ -475,14 +475,14 @@ touch_goodix(void)
+ static int
+ touch_focaltech(void)
+ {
+-	uint8_t buf[63];
++	uint8_t buf[64];
+ 	int x[TOUCH_MAX] = {0}, y[TOUCH_MAX] = {0};
+ 	uint32_t mask = 0, seen = 0;
+-	int err = touch_read(0x38, 0, false, buf, sizeof(buf));
++	int err = touch_read(0x38, 1, false, buf, sizeof(buf));
+ 	if (err) {
+ 		return err;
+ 	}
+-	unsigned n = buf[2] & 15u, active = 0;
++	unsigned n = buf[1] & 15u;
+ 	if (n || !st.s_frames) {
+ 		memcpy(st.s_raw, buf, sizeof(st.s_raw)); /* keep the last frame with contacts */
+ 	}
+@@ -490,21 +490,11 @@ touch_focaltech(void)
+ 	if (n > st.s_maxn) {
+ 		st.s_maxn = n;
+ 	}
+-	if (n == 0 || (n > TOUCH_MAX && buf[3] == 0xffu)) {
+-		/*
+-		 * topaz: an empty report releases every contact, like Linux
+-		 * focaltech and TopazTouch. With no contact the FT5452 (firmware
+-		 * as updated by HyperOS 2.0.208) reports TD_STATUS 0xff and 0xff
+-		 * records; TD_STATUS 0 must not be parsed as slots either: its
+-		 * records can carry a stale contact slot that resurrects a lifted
+-		 * finger (TopazTouch v0.13 fixed exactly that stuck-finger case),
+-		 * and an all-zero frame would become a phantom finger 0 at (0,0).
+-		 */
++	if (n == 0 || buf[1] == 0xffu) {
+ 		touch_report(0, x, y);
+ 		return 0;
+ 	}
+ 	if (n > TOUCH_MAX) {
+-		/* topaz: show what the IC actually sends (rate-limited) */
+ 		static uint64_t last_dump;
+ 		uint64_t now = mach_absolute_time(), gap;
+ 		nanoseconds_to_absolutetime(NSEC_PER_SEC, &gap);
+@@ -516,11 +506,15 @@ touch_focaltech(void)
+ 		}
+ 		return EIO;
+ 	}
++	unsigned offset = ((buf[1] >> 4) == 8u) ? 4u : 2u;
+ 	for (unsigned i = 0; i < TOUCH_MAX; ++i) {
+-		const uint8_t *p = buf + 3u + 6u * i;
++		const uint8_t *p = buf + offset + 6u * i;
++		if (p[0] == 0xffu && p[1] == 0xffu) {
++			break; /* unused slot */
++		}
+ 		unsigned id = p[2] >> 4, event = p[0] >> 6;
+ 		if (id >= TOUCH_MAX) {
+-			break; /* vendor's unused-record sentinel */
++			break;
+ 		}
+ 		if (seen & (1u << id)) {
+ 			return EIO;
+@@ -530,24 +524,24 @@ touch_focaltech(void)
+ 			continue; /* UP record */
+ 		}
+ 		if (event == 3u) {
+-			continue; /* topaz: "no event" slot (TopazTouch) */
+-		}
+-		unsigned px = ((unsigned)(p[0] & 15u) << 8) | p[1];
+-		unsigned py = ((unsigned)(p[2] & 15u) << 8) | p[3];
+-		/* topaz: raw 0..1349 x 0..2999 (1.25x the panel) + 2-bit fractions */
+-		if (px > 1349 || py > 2999) {
+-			return EIO;
++			continue; /* no event */
+ 		}
+-		px = (px * 4u + (p[4] >> 6)) / 5u;
+-		py = (py * 4u + ((p[4] >> 4) & 3u)) / 5u;
++		unsigned raw_x = ((unsigned)(p[0] & 0x0fu) << 11) |
++		                 ((unsigned)p[1] << 3) |
++		                 (((unsigned)p[4] >> 5) & 6u) |
++		                 (((unsigned)p[0] >> 5) & 1u);
++		unsigned raw_y = ((unsigned)(p[2] & 0x0fu) << 11) |
++		                 ((unsigned)p[3] << 3) |
++		                 (((unsigned)p[4] >> 3) & 6u) |
++		                 (((unsigned)p[0] >> 4) & 1u);
++		unsigned px = raw_x / 10u;
++		unsigned py = raw_y / 10u;
+ 		px = px > 1079 ? 1079 : px;
+ 		py = py > 2399 ? 2399 : py;
+ 		mask |= 1u << id;
+ 		x[id] = (int)px;
+ 		y[id] = (int)py;
+-		++active;
+ 	}
+-	(void)active;   /* topaz: byte 2 does not always match the records */
+ 	touch_report(mask, x, y);
+ 	return 0;
+ }

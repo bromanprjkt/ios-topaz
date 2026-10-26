@@ -24,6 +24,26 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 09:30 (FT3519T Point Report V3 Reverse-Engineering & Patch 0951) <<<
+- **Diagnosis of Boot 10 Diagnostic Panic Dump:**
+  - Photo provided by user showed kernel panic:
+    `panic(cpu 3 caller 0xfffffe0007b8d790): SWEET TOUCH stats: frames=2999 errs=0 lasterr=0 maxn=0 hid down=0 up=0 last=0,0 | raw 00 00 00 | 00 00 00 00 00 00 | 00 00 00`
+  - Zero I2C transfer errors, but `raw` bytes were strictly all 0x00s, point count `n` never became non-zero.
+- **Root Cause Discovered via Vendor Driver Reverse Engineering:**
+  - Decompiled `focaltech_ts_i2c.ko` (`fts_irq_handler`, `fts_read`, `fts_input_report_b`).
+  - Recovery `/proc/tp_info` confirmed chip is **FocalTech FT3519T** (`[Vendor]samsung,[FW]0x36,[IC]ft3519t`), resolution 10800x24000 (`focaltech,display-coords = <0 0 10799 23999>`).
+  - The chip uses FocalTech Point Report V3 protocol:
+    1. Read register MUST be **0x01** (NOT 0x00). Reading register 0x00 only addresses DEVICE_MODE and does NOT stream the touch point report.
+    2. Packet size is 62 bytes (`touch size: 62`).
+    3. `buf[1] & 0x0f` is point count `n`.
+    4. Slot records start at `buf + 2` (or `buf + 4` if `buf[1] >> 4 == 8`).
+    5. Coordinates are unpacked from bitfields across `p[0]`, `p[1]`, `p[2]`, `p[3]`, `p[4]` with resolution 0..10799 x 0..23999, scaled by `/ 10` to produce panel coordinates 0..1079 x 0..2399 for `SweetHIDTouch`.
+- **Fix Applied:**
+  - Created patch `xnu/patches/0951-topaz-touch-ft3519t-protocol.patch` replacing `touch_focaltech()` with exact FT3519T protocol decoder.
+  - Added branch `topaz` to `.github/workflows/xnu.yml`.
+  - Configured GitHub CLI (`gh`) with repository credentials from Windows Credential Manager.
+- **Next concrete action:** Dispatch GitHub Actions kernel build, download built `kernel.development.sweet`, package `shim-boot.img` with `sweettouchdelay=2 sweettouchirq=0`, and boot via fastboot to verify touch responsiveness.
+
 ### >>> UPDATE 2026-10-26 08:56 (Touch Raw Register Diagnostic Boot on Topaz) <<<
 - **Diagnosis of Boot 9 (logs/boot-topaz-9.txt, 270 KB, 45 flushes):**
   - Driver started immediately at 2s (`sweettouchdelay=2`) and polled at 100 Hz (`sweettouchirq=0`).
