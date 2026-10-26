@@ -24,6 +24,36 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 11:25 (🎉 CI 40268193283 Succeeded & Booted on Hardware) <<<
+- **GitHub Actions Kernel Build 40268193283:**
+  - Completed successfully in 4m48s.
+  - Downloaded `xnu-kernel` artifact (`xnu/out/kernel.development.sweet`, 18,035,672 bytes).
+  - Contains patch `0121` updated with exact offsets, sizes, and extents for all 657 firmware files on `modem_b` (`wlanmdsp.mbn` @ `0x726d000`, size `0x3a39c0`).
+- **Boot Image Built & Hardware Boot Executed:**
+  - Built `shim/out/payload-wifi.bin` and `shim/out/shim-boot.img` with:
+    `sweetfb_hz=30 sweettouchdelay=2 sweettouchirq=0 modem=1 wifi=1 modem_part=modem_b`
+  - Rebooted device from recovery to fastboot and booted via `fastboot boot` (0.832s).
+- **Next concrete action:** User tests Wi-Fi enable switch in Control Center / Settings, verifies whether SSID scanning or `en0` comes online.
+
+### >>> UPDATE 2026-10-26 11:15 (Wi-Fi Unclickable Root Cause Found in Patch 0121 & Fixed in CI 40268193283) <<<
+- **Kernel Ring Buffer Boot 13 Diagnostics (`logs/boot-topaz-13.txt`, 665 KB):**
+  - Hexagon DSP booted successfully from `modem_b` and PAS authentication succeeded (`modem is up (MODEM READY)`).
+  - However, Hexagon DSP requested `image/wlanmdsp.mbn` 1,138 times via TFTP without progressing.
+  - Hexagon watchdog crash occurred at t=24,727 ms:
+    `modem crash reason: dog_virtual_root.c:92:User-PD grace timer expired for wlan_process (ASID: 1)`.
+  - Root cause: In `xnu/patches/0121-topaz-modem-host-services.patch`, `fw_ext[]` and `fw_all[]` tables had 264 mismatches out of 657 files!
+  - `image/wlanmdsp.mbn` was hardcoded at `0x7269000` (shifted by 1 cluster / 16 KB; device offset is `0x726d000`).
+  - All Wi-Fi calibration binaries (`bdwlan.*`) were also shifted by 1 cluster.
+  - Because firmware was corrupted by the offset shift, `wlan_process` crashed, `WLFW` service 0x45 was never announced, `topaz_wlan_ready_hook` never ran, and `RedwoodWLAN` never published `en0`.
+  - Without `en0`, iOS `wifid` had no interface to manage, leaving the Wi-Fi switch unclickable.
+- **Fix Applied:**
+  - Dumped device `modem_b` FAT16 filesystem locally to `logs/modem_b.img`.
+  - Re-indexed all 657 firmware files and extents using `tools/update-patch-0121.py`.
+  - Updated `xnu/patches/0121-topaz-modem-host-services.patch` with exact FAT16 cluster offsets (`wlanmdsp.mbn` -> `0x726d000`, size `0x3a39c0`).
+  - Committed as `9458666` and pushed to `origin/topaz`.
+  - GitHub Actions CI run `40268193283` dispatched and compiling.
+- **Next concrete action:** Download kernel from CI `40268193283`, build `shim-boot.img`, boot via fastboot, and verify `WLFW` service up & `en0` Wi-Fi switch clickable.
+
 ### >>> UPDATE 2026-10-26 10:46 (🎉 CI Build 40264964304 Succeeded & Booted with modem_b Wi-Fi) <<<
 - **GitHub Actions Kernel Build 40264964304:**
   - Completed successfully in 5m19s.
