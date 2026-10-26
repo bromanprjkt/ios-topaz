@@ -42,7 +42,12 @@
   - Created patch `xnu/patches/0951-topaz-touch-ft3519t-protocol.patch` replacing `touch_focaltech()` with exact FT3519T protocol decoder.
   - Added branch `topaz` to `.github/workflows/xnu.yml`.
   - Configured GitHub CLI (`gh`) with repository credentials from Windows Credential Manager.
-- **Next concrete action:** Dispatch GitHub Actions kernel build, download built `kernel.development.sweet`, package `shim-boot.img` with `sweettouchdelay=2 sweettouchirq=0`, and boot via fastboot to verify touch responsiveness.
+  - Pushed to `origin/topaz` (commit `c6c7944`).
+  - GitHub Actions run `40259473017` completed successfully in 4m42s.
+  - Downloaded fresh kernel `xnu/out/kernel.development.sweet` (18,019,288 bytes).
+  - Rebuilt `shim/out/payload.bin` (17,440,208 bytes) and `shim/out/shim-boot.img` (17,633,280 bytes) with `sweettouchdelay=2 sweettouchirq=0`.
+  - Booted to hardware via `fastboot boot shim/out/shim-boot.img` (0.829s).
+- **Next concrete action:** Test touch interaction directly on device screen (swipe up to unlock / tap interactions on iOS 16 Lock Screen).
 
 ### >>> UPDATE 2026-10-26 08:56 (Touch Raw Register Diagnostic Boot on Topaz) <<<
 - **Diagnosis of Boot 9 (logs/boot-topaz-9.txt, 270 KB, 45 flushes):**
