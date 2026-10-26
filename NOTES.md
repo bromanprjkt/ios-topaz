@@ -2,6 +2,20 @@
 
 ## Agent handoff / active work (2026-10-25, latest)
 
+### >>> UPDATE 2026-10-26 17:05 (Boot 17 Diagnostics Pulled: Root Cause Found in Patch 0900 Skip) <<<
+- **Hardware Boot 17 Diagnostics Pulled (`logs/boot-topaz-17.txt`, 650 KB):**
+  - Pulled persistent SWEET console log via ADB from OrangeFox recovery.
+  - Confirmed modem firmware started and scanned (`TopazModem: t=4057 ms: wlan: radio ready for the rest of the kernel`, found `FITELNET` and `WIFI BUMDES`), but `topaz_sta_init()`, `en0`, and `RedwoodWLAN` never executed.
+  - Root Cause Diagnosed from CI Build 40295031323 logs:
+    `[warning] Skipping patch .../0900-en0-Apple80211-for-wifid-over-the-Topaz.patch: error: corrupt patch at line 1211`
+    Because patch 0900 had a line-count mismatch in hunk headers, GitHub Actions skipped the patch entirely, producing a kernel without any Wi-Fi driver code.
+- **Fix Applied in `xnu/patches/0900-en0-Apple80211-for-wifid-over-the-Topaz.patch`:**
+  - Recalculated and corrected all hunk line counts.
+  - Verified `git apply --check` passes cleanly across all files in patch 0900.
+  - Preserved the working `RedwoodWLAN` service name and `IONetworkInterface` class.
+  - Implemented `RedwoodWLANSetLink(bool up)` setting `IOLinkStatus = 3` (active) and `IOInterfaceState = 3` (running) to trigger `configd` DHCP discovery, plus `IOMACAddress` on `wlan`.
+- **Next concrete action:** Push commit to trigger GitHub Actions build, download kernel, rebuild shim-boot.img, and boot to device.
+
 ### >>> UPDATE 2026-10-26 16:10 (🎉 CI 40295031323 Succeeded & Booted: IOEthernetInterface & Link State for DHCP / Connection) <<<
 - **GitHub Actions Kernel Build 40295031323:**
   - Completed successfully in 5m53s (commit `a983fdf`).

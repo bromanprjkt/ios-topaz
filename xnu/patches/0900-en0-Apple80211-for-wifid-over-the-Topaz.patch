@@ -820,7 +820,7 @@ new file mode 100644
 index 0000000..e7b46fd
 --- /dev/null
 +++ b/bsd/dev/redwood_net.c
-@@ -0,0 +1,388 @@
+@@ -0,0 +1,387 @@
 +/*
 + * en0: a network interface that is Ethernet as far as the rest of the kernel and iOS can tell.
 + *
@@ -2157,7 +2157,7 @@ new file mode 100644
 index 0000000..89d8840
 --- /dev/null
 +++ b/iokit/Kernel/arm/RedwoodWLAN.cpp
-@@ -0,0 +1,162 @@
+@@ -0,0 +1,160 @@
 +/*
 + * RedwoodWLAN: the registry entries by which iOS finds the Wi-Fi interface.
 + *
@@ -2206,14 +2206,7 @@ index 0000000..89d8840
 +
 +OSDefineMetaClassAndStructors(IONetworkInterface, IOService);
 +
-+class IOEthernetInterface : public IONetworkInterface
-+{
-+	OSDeclareDefaultStructors(IOEthernetInterface);
-+};
-+
-+OSDefineMetaClassAndStructors(IOEthernetInterface, IONetworkInterface);
-+
-+class RedwoodWLAN : public IOEthernetInterface
++class RedwoodWLAN : public IONetworkInterface
 +{
 +	OSDeclareDefaultStructors(RedwoodWLAN);
 +
@@ -2222,7 +2215,7 @@ index 0000000..89d8840
 +	    IOUserClient ** handler) APPLE_KEXT_OVERRIDE;
 +};
 +
-+OSDefineMetaClassAndStructors(RedwoodWLAN, IOEthernetInterface);
++OSDefineMetaClassAndStructors(RedwoodWLAN, IONetworkInterface);
 +
 +/* There is none (see the top); that somebody asked shows that the service was found. */
 +IOReturn
@@ -2244,11 +2237,15 @@ index 0000000..89d8840
 +RedwoodWLANSetLink(bool up)
 +{
 +	if (g_wlan != NULL) {
-+		OSNumber * status = OSNumber::withNumber(up ? 1ULL : 0ULL, 32);
++		OSNumber * status = OSNumber::withNumber(up ? 3ULL : 1ULL, 32);
++		OSNumber * state = OSNumber::withNumber(up ? 3ULL : 0ULL, 32);
 +		if (status != NULL) {
 +			g_wlan->setProperty("IOLinkStatus", status);
-+			g_wlan->setProperty("IOInterfaceState", status);
 +			status->release();
++		}
++		if (state != NULL) {
++			g_wlan->setProperty("IOInterfaceState", state);
++			state->release();
 +		}
 +	}
 +}
@@ -2313,7 +2310,7 @@ index 0000000..89d8840
 +	wlan->setProperty("IOBuiltin", true);
 +	wlan->setProperty("IOPrimaryInterface", true);
 +	wlan->setProperty("IO80211InterfaceRole", "Infrastructure");
-+	if (publish(wlan, controller, "en0") == NULL) {
++	if (publish(wlan, controller, "RedwoodWLAN") == NULL) {
 +		IOLog("RedwoodWLAN: the service did not start\n");
 +	} else {
 +		g_wlan = wlan;
