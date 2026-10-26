@@ -24,6 +24,15 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 10:00 (60 Hz + Wi-Fi Boot Image Prepared) <<<
+- **Wi-Fi Subsystem (WCN3988) Integrated into Boot Image:**
+  - Patches `0113`/`0115` boot the Hexagon modem DSP (MPSS) using TrustZone PAS with firmware loaded read-only from internal UFS `modem_a`.
+  - Patches `0123`/`0125`/`0126`/`0129`/`0130` configure SMMU stream `0x1A0`, copy engines, HTC/WMI, and mission mode.
+  - Patch `0900` registers network interface `en0`, MiniIONetworkStack, and `Apple80211` ioctl handler (`SIOCGA80211`/`SIOCSA80211`) for iOS `wifid`.
+  - Built payload and boot image `shim/out/shim-boot-wifi.img` (copied to `shim/out/shim-boot.img`) with:
+    `sweetfb_hz=60 sweettouchdelay=2 sweettouchirq=0 modem=1 wifi=1`
+- **Next concrete action:** User reboots device to fastboot mode and executes `fastboot boot shim/out/shim-boot.img`.
+
 ### >>> UPDATE 2026-10-26 09:45 (🎉🎉 MILESTONE: TOUCHSCREEN FULLY WORKING + 60 Hz READY) <<<
 - **Hardware Touch Response Verified (2026-10-26 09:40):**
   - User confirmed touchscreen is fully responsive on device running iOS 16.7.16 Lock Screen!
