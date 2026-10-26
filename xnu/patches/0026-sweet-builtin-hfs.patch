@@ -216,7 +216,7 @@ diff --git a/bsd/sweet_hfs/sweet_hfs_iokit.c b/bsd/sweet_hfs/sweet_hfs_iokit.c
 new file mode 100644
 --- /dev/null
 +++ b/bsd/sweet_hfs/sweet_hfs_iokit.c
-@@ -0,0 +1,197 @@
+@@ -0,0 +1,177 @@
 +/*
 + * Built-in replacement for HFS's IOKit glue (core/hfs_iokit.cpp and
 + * hfs_encodings/hfs_encodings_kext.cpp) on SWEET.
@@ -245,64 +245,44 @@ new file mode 100644
 +#include <sys/attr.h>
 +#include <sys/mount.h>
 +
-+extern int hfs_statfs(struct mount *mp, struct vfs_statfs *sbp, vfs_context_t context);
-+
 +static int
-+sweet_hfs_vfs_getattr(mount_t mp, struct vfs_attr *vfa, vfs_context_t ctx)
++sweet_hfs_vfs_getattr(mount_t mp, struct vfs_attr *vfa, vfs_context_t ctx __unused)
 +{
-+	struct vfs_statfs sfs;
-+	int error;
-+
-+	error = hfs_statfs(mp, &sfs, ctx);
-+	if (error) {
-+		return error;
++	struct vfsstatfs *sfs = vfs_statfs(mp);
++	if (!sfs) {
++		return EINVAL;
 +	}
 +	if (VFSATTR_WANTED(vfa, f_blocks)) {
-+		vfa->f_blocks = sfs.f_blocks;
++		vfa->f_blocks = sfs->f_blocks;
 +		VFSATTR_SET_SUPPORTED(vfa, f_blocks);
 +	}
 +	if (VFSATTR_WANTED(vfa, f_bsize)) {
-+		vfa->f_bsize = sfs.f_bsize;
++		vfa->f_bsize = sfs->f_bsize;
 +		VFSATTR_SET_SUPPORTED(vfa, f_bsize);
 +	}
 +	if (VFSATTR_WANTED(vfa, f_bfree)) {
-+		vfa->f_bfree = sfs.f_bfree;
++		vfa->f_bfree = sfs->f_bfree;
 +		VFSATTR_SET_SUPPORTED(vfa, f_bfree);
 +	}
 +	if (VFSATTR_WANTED(vfa, f_bavail)) {
-+		vfa->f_bavail = sfs.f_bavail;
++		vfa->f_bavail = sfs->f_bavail;
 +		VFSATTR_SET_SUPPORTED(vfa, f_bavail);
 +	}
 +	if (VFSATTR_WANTED(vfa, f_bused)) {
-+		vfa->f_bused = sfs.f_blocks - sfs.f_bfree;
++		vfa->f_bused = sfs->f_blocks - sfs->f_bfree;
 +		VFSATTR_SET_SUPPORTED(vfa, f_bused);
 +	}
 +	if (VFSATTR_WANTED(vfa, f_files)) {
-+		vfa->f_files = sfs.f_files;
++		vfa->f_files = sfs->f_files;
 +		VFSATTR_SET_SUPPORTED(vfa, f_files);
 +	}
 +	if (VFSATTR_WANTED(vfa, f_ffree)) {
-+		vfa->f_ffree = sfs.f_ffree;
++		vfa->f_ffree = sfs->f_ffree;
 +		VFSATTR_SET_SUPPORTED(vfa, f_ffree);
 +	}
 +	if (VFSATTR_WANTED(vfa, f_fsid)) {
-+		vfa->f_fsid = sfs.f_fsid;
++		vfa->f_fsid = sfs->f_fsid;
 +		VFSATTR_SET_SUPPORTED(vfa, f_fsid);
-+	}
-+	if (VFSATTR_WANTED(vfa, f_capabilities)) {
-+		vfa->f_capabilities.capabilities[VOL_CAPABILITIES_FORMAT] =
-+		    VOL_CAP_FMT_PERSISTENTOBJECTIDS | VOL_CAP_FMT_SYMBOLICLINKS |
-+		    VOL_CAP_FMT_HARDLINKS | VOL_CAP_FMT_JOURNALED;
-+		vfa->f_capabilities.valid[VOL_CAPABILITIES_FORMAT] = 0xffffffff;
-+		vfa->f_capabilities.capabilities[VOL_CAPABILITIES_INTERFACES] =
-+		    VOL_CAP_INT_SEARCHFS | VOL_CAP_INT_ATTRLIST | VOL_CAP_INT_READDIRATTR;
-+		vfa->f_capabilities.valid[VOL_CAPABILITIES_INTERFACES] = 0xffffffff;
-+		VFSATTR_SET_SUPPORTED(vfa, f_capabilities);
-+	}
-+	if (VFSATTR_WANTED(vfa, f_attributes)) {
-+		vfa->f_attributes.valid[VOL_CAPABILITIES_FORMAT] = 0xffffffff;
-+		vfa->f_attributes.valid[VOL_CAPABILITIES_INTERFACES] = 0xffffffff;
-+		VFSATTR_SET_SUPPORTED(vfa, f_attributes);
 +	}
 +	return 0;
 +}
