@@ -24,6 +24,13 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 10:36 (Patch 0115 Updated for modem_b & CI Dispatched) <<<
+- **Patch 0115 Updated for Slot B / `modem_b`:**
+  - Partition target changed from `modem_a` to `modem_b`.
+  - Updated all 28 segment sizes and CRC32 entries (`modem.b18` size `0x2d29f9`, `modem.b25` size `0x77941`) extracted directly from device FAT16 image via ADB.
+  - Fixes TrustZone PIL PAS authentication and segment length check (`ph[i].p_filesz`).
+- **Next concrete action:** Commit, push to `origin/topaz`, and trigger GitHub Actions build.
+
 ### >>> UPDATE 2026-10-26 10:32 (Modem Partition & Preferences Crash Diagnosis via Recovery) <<<
 - **Recovery Diagnostics via ADB (`logs/boot-topaz-12.txt`, 270 KB):**
   1. **Settings > General > About Crash Root Cause:**
