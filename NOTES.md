@@ -24,6 +24,16 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 09:45 (🎉🎉 MILESTONE: TOUCHSCREEN FULLY WORKING + 60 Hz READY) <<<
+- **Hardware Touch Response Verified (2026-10-26 09:40):**
+  - User confirmed touchscreen is fully responsive on device running iOS 16.7.16 Lock Screen!
+  - FT3519T Point Report V3 decoder successfully feeds taps, swipes, and multi-touch to `backboardd` via `SweetHIDTouch`.
+- **60 Hz Display Refresh Rate Prepared:**
+  - Patch `0948-topaz-display-modes-60hz.patch` already publishes native 60 Hz timing elements to Quartz / CoreAnimation.
+  - Built `shim/out/payload-60hz.bin` and `shim/out/shim-boot-60hz.img` (also copied to `shim/out/shim-boot.img`) with `sweetfb_hz=60`.
+  - In direct MDP scanout mode (`0092-topaz-direct-mdp-scanout.patch`), vsync pacing runs at 60 FPS.
+- **Next concrete action:** Boot 60 Hz image when user is ready (`fastboot boot shim/out/shim-boot.img`).
+
 ### >>> UPDATE 2026-10-26 09:30 (FT3519T Point Report V3 Reverse-Engineering & Patch 0951) <<<
 - **Diagnosis of Boot 10 Diagnostic Panic Dump:**
   - Photo provided by user showed kernel panic:
