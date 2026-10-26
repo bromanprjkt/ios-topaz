@@ -820,7 +820,7 @@ new file mode 100644
 index 0000000..e7b46fd
 --- /dev/null
 +++ b/bsd/dev/redwood_net.c
-@@ -0,0 +1,382 @@
+@@ -0,0 +1,388 @@
 +/*
 + * en0: a network interface that is Ethernet as far as the rest of the kernel and iOS can tell.
 + *
@@ -1080,6 +1080,8 @@ index 0000000..e7b46fd
 +	ifnet_event(ifp, header);
 +}
 +
++extern void RedwoodWLANSetLink(bool up);
++
 +void
 +redwood_net_link_state(bool up)
 +{
@@ -1094,6 +1096,9 @@ index 0000000..e7b46fd
 +	} else {
 +		ifnet_set_flags(net_ifp, 0, IFF_RUNNING);
 +		net_link_event(net_ifp, KEV_DL_LINK_OFF);
++	}
++	if (net_link->wireless) {
++		RedwoodWLANSetLink(up);
 +	}
 +}
 +
@@ -2025,7 +2030,7 @@ new file mode 100644
 index 0000000..081fd35
 --- /dev/null
 +++ b/iokit/Kernel/arm/MiniIONetworkStack.cpp
-@@ -0,0 +1,114 @@
+@@ -0,0 +1,121 @@
 +/*
 + * MiniIONetworkStack: a stand-in for IONetworkStack of Apple's IONetworkingFamily, as seen by
 + * configd's interface namer.
@@ -2057,9 +2062,16 @@ index 0000000..081fd35
 +
 +public:
 +	virtual bool start(IOService * provider) APPLE_KEXT_OVERRIDE;
++	virtual IOReturn setProperties(OSObject * properties) APPLE_KEXT_OVERRIDE;
 +};
 +
 +OSDefineMetaClassAndStructors(IONetworkStack, IOService);
++
++IOReturn
++IONetworkStack::setProperties(OSObject * properties __unused)
++{
++	return kIOReturnSuccess;
++}
 +
 +bool
 +IONetworkStack::start(IOService * provider)
@@ -2145,7 +2157,7 @@ new file mode 100644
 index 0000000..89d8840
 --- /dev/null
 +++ b/iokit/Kernel/arm/RedwoodWLAN.cpp
-@@ -0,0 +1,137 @@
+@@ -0,0 +1,162 @@
 +/*
 + * RedwoodWLAN: the registry entries by which iOS finds the Wi-Fi interface.
 + *
@@ -2194,7 +2206,14 @@ index 0000000..89d8840
 +
 +OSDefineMetaClassAndStructors(IONetworkInterface, IOService);
 +
-+class RedwoodWLAN : public IONetworkInterface
++class IOEthernetInterface : public IONetworkInterface
++{
++	OSDeclareDefaultStructors(IOEthernetInterface);
++};
++
++OSDefineMetaClassAndStructors(IOEthernetInterface, IONetworkInterface);
++
++class RedwoodWLAN : public IOEthernetInterface
 +{
 +	OSDeclareDefaultStructors(RedwoodWLAN);
 +
@@ -2203,7 +2222,7 @@ index 0000000..89d8840
 +	    IOUserClient ** handler) APPLE_KEXT_OVERRIDE;
 +};
 +
-+OSDefineMetaClassAndStructors(RedwoodWLAN, IONetworkInterface);
++OSDefineMetaClassAndStructors(RedwoodWLAN, IOEthernetInterface);
 +
 +/* There is none (see the top); that somebody asked shows that the service was found. */
 +IOReturn
@@ -2215,6 +2234,23 @@ index 0000000..89d8840
 +		IOLog("RedwoodWLAN: a user client of type %u is asked for: there is none\n", (unsigned) type);
 +	}
 +	return kIOReturnUnsupported;
++}
++
++static RedwoodWLAN * g_wlan = NULL;
++
++extern "C" void RedwoodWLANSetLink(bool up);
++
++void
++RedwoodWLANSetLink(bool up)
++{
++	if (g_wlan != NULL) {
++		OSNumber * status = OSNumber::withNumber(up ? 1ULL : 0ULL, 32);
++		if (status != NULL) {
++			g_wlan->setProperty("IOLinkStatus", status);
++			g_wlan->setProperty("IOInterfaceState", status);
++			status->release();
++		}
++	}
 +}
 +
 +/* attach, start, register: the service, or NULL */
@@ -2253,6 +2289,7 @@ index 0000000..89d8840
 +	}
 +	if ((mac = OSData::withBytes(address, 6)) != NULL) {
 +		controller->setProperty("IOMACAddress", mac);
++		wlan->setProperty("IOMACAddress", mac);
 +		mac->release();
 +	}
 +	controller->setProperty("IOBuiltin", true);
@@ -2276,9 +2313,10 @@ index 0000000..89d8840
 +	wlan->setProperty("IOBuiltin", true);
 +	wlan->setProperty("IOPrimaryInterface", true);
 +	wlan->setProperty("IO80211InterfaceRole", "Infrastructure");
-+	if (publish(wlan, controller, "RedwoodWLAN") == NULL) {
++	if (publish(wlan, controller, "en0") == NULL) {
 +		IOLog("RedwoodWLAN: the service did not start\n");
 +	} else {
++		g_wlan = wlan;
 +		wlan->release();
 +	}
 +	controller->release();
