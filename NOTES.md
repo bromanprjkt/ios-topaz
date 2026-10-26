@@ -24,6 +24,23 @@
   - Device booted via astboot boot shim/out/shim-boot.img (cpus=4, sweetfb_noconsole=1, sweetfb_hz=30, ufsrw=1 rootrw=1).
   - Observed Apple logo displayed on panel, hardware INTF1 frame updates verified, and console muted on GUI presentation.
 - **Next concrete action:** Verify touch responsiveness (FT5452), buttons, and SpringBoard UI navigation.
+### >>> UPDATE 2026-10-26 08:40 (Touch Responsiveness & Polling Optimization on Topaz) <<<
+- **Diagnosis of Boot 8 Ring Buffer (logs/boot-topaz-8.txt, 450 KB, 275 flushes):**
+  - Pulled `logs/ring-raw-8.bin` via OrangeFox recovery and decoded to `logs/boot-topaz-8.txt`.
+  - Confirmed:
+    - Hardware keys (Power 0x30, Vol+ 0xe9, Vol- 0xea) fully functional and reaching `backboardd`.
+    - `backboardd` opened `SweetHIDTouch` and `SweetHIDButtons` (client count: 1).
+    - `SpringBoard` created full 1125x2436 UI surface (`id 58`) and presented over 3000 frames at 30 Hz.
+  - Root cause of unresponsive touchscreen identified:
+    1. `sweettouchdelay` defaulted to 45 seconds; driver did not probe or start until 45s into boot.
+    2. `sweettouchirq=1` relied on `TOUCH_PIN_IRQ` (GPIO 80), which was reading tile `WEST` instead of `SOUTH` (`0x00900000`), so the IRQ check never triggered and the driver dropped back to a 10 Hz read rate.
+- **Fix Applied:**
+  - Rebuilt `shim/out/payload.bin` and `shim/out/shim-boot.img` with boot-args:
+    `sweettouchdelay=2` (driver starts 2s after boot).
+    `sweettouchirq=0` (continuous 100 Hz direct I2C polling of FT5452 independent of TLMM IRQ tile mapping).
+  - Rebooted device from recovery to bootloader and booted `shim/out/shim-boot.img` via fastboot (0.826s).
+- **Next concrete action:** Verify touch response directly on iOS 16 Lock Screen (swipe to unlock / tap interaction).
+
 ### >>> UPDATE 2026-10-26 07:45 (🎉🎉 MILESTONE: iOS 16 BOOTS TO SPRINGBOARD / LOCK SCREEN ON TOPAZ) <<<
 - **Hardware Boot Success Verified (2026-10-26 07:45):**
   - Device booted via `fastboot boot shim/out/shim-boot.img` with `/defaults/vmm-present` enabled in ADT (commit `a59cc52`).
