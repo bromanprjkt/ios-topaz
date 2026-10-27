@@ -2157,7 +2157,7 @@ new file mode 100644
 index 0000000..89d8840
 --- /dev/null
 +++ b/iokit/Kernel/arm/RedwoodWLAN.cpp
-@@ -0,0 +1,160 @@
+@@ -0,0 +1,167 @@
 +/*
 + * RedwoodWLAN: the registry entries by which iOS finds the Wi-Fi interface.
 + *
@@ -2206,7 +2206,14 @@ index 0000000..89d8840
 +
 +OSDefineMetaClassAndStructors(IONetworkInterface, IOService);
 +
-+class RedwoodWLAN : public IONetworkInterface
++class IOEthernetInterface : public IONetworkInterface
++{
++	OSDeclareDefaultStructors(IOEthernetInterface);
++};
++
++OSDefineMetaClassAndStructors(IOEthernetInterface, IONetworkInterface);
++
++class RedwoodWLAN : public IOEthernetInterface
 +{
 +	OSDeclareDefaultStructors(RedwoodWLAN);
 +
@@ -2215,7 +2222,7 @@ index 0000000..89d8840
 +	    IOUserClient ** handler) APPLE_KEXT_OVERRIDE;
 +};
 +
-+OSDefineMetaClassAndStructors(RedwoodWLAN, IONetworkInterface);
++OSDefineMetaClassAndStructors(RedwoodWLAN, IOEthernetInterface);
 +
 +/* There is none (see the top); that somebody asked shows that the service was found. */
 +IOReturn
@@ -2310,7 +2317,7 @@ index 0000000..89d8840
 +	wlan->setProperty("IOBuiltin", true);
 +	wlan->setProperty("IOPrimaryInterface", true);
 +	wlan->setProperty("IO80211InterfaceRole", "Infrastructure");
-+	if (publish(wlan, controller, "RedwoodWLAN") == NULL) {
++	if (publish(wlan, controller, "en0") == NULL) {
 +		IOLog("RedwoodWLAN: the service did not start\n");
 +	} else {
 +		g_wlan = wlan;

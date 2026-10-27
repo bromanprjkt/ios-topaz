@@ -2,6 +2,20 @@
 
 ## Agent handoff / active work (2026-10-25, latest)
 
+### >>> UPDATE 2026-10-28 00:20 (🎉 Boot 22 Executed: IOEthernetInterface & Service "en0" Applied) <<<
+- **Discovery: Why Control Center Showed Wi-Fi but Settings (`Preferences.app`) Did Not:**
+  - Control Center communicates directly with `wifid` / `MobileWiFi.framework` via Mach IPC, using BSD socket ioctls on `en0`, which were fully operational and scanning.
+  - However, `Preferences.app` (Settings) uses `SystemConfiguration.framework` (`SCNetworkInterfaceCopyAll`).
+  - `SCNetworkInterface.c` discovers network interfaces by matching `kIOEthernetInterfaceClass` (`"IOEthernetInterface"`), expecting service name `"en0"`.
+  - In commit `4354bf4`, `RedwoodWLAN.cpp` had inadvertently kept `class RedwoodWLAN : public IONetworkInterface` and `publish(wlan, controller, "RedwoodWLAN")`. Because it subclassed `IONetworkInterface` instead of `IOEthernetInterface` and was named `"RedwoodWLAN"`, `SCNetworkInterfaceCopyAll` returned zero interfaces to `Preferences.app`.
+- **Fix Applied (Boot 22):**
+  - Updated kernel binary `kernel.development.sweet`:
+    - Registered MetaClass class name as `"IOEthernetInterface"` at `0x156e5b`.
+    - Patched `publish()` call at `0xb02b38` to `add x1, x1, #0xe70` (`service->setName("en0")`).
+  - Built `shim/out/payload-wifi.bin` and `shim/out/shim-boot.img` (17,633,280 bytes).
+  - Rebooted device from recovery to fastboot and booted image via `fastboot boot shim\out\shim-boot.img` (0.777s).
+- **Next concrete action:** User checks Settings > Wi-Fi on device.
+
 ### >>> UPDATE 2026-10-28 00:06 (🎉 Boot 21 Executed: MobileGestalt Wi-Fi Capability Patched In-Place) <<<
 - **Root Cause of Missing Wi-Fi Menu in Settings (`Preferences.app`) Identified:**
   - In iOS, `Preferences.app` evaluates the root specifier for Wi-Fi from `Settings.plist`.
