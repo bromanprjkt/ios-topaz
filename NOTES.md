@@ -2,6 +2,31 @@
 
 ## Agent handoff / active work (2026-10-25, latest)
 
+### >>> UPDATE 2026-10-28 00:42 (🎉 Boot 23 Executed: Early en0 Attachment Before configd Resolved Missing Wi-Fi Menu) <<<
+- **Root Cause of Missing Wi-Fi Menu in Settings (`Preferences.app`):**
+  - MobileGestalt on userdata (`com.apple.MobileGestalt.plist` at `0x1e0342000`) was verified to contain `mtHZd1H8XJ2DMVtNVUSkag: True` (`wifi`), so MG capability checks pass.
+  - However, `Preferences.app` additionally queries `SystemConfiguration.framework` (`SCNetworkInterfaceCopyAll`).
+  - Analysis of `logs/boot-topaz-22.txt` revealed a critical startup race condition:
+    - Line 597: `exec configd`
+    - Line 902: `MiniIONetworkStack: opened by configd; the registry's busy state is 0`
+    - Line 1282: `ifnet_attach: en0 attached on wcn3988 (a radio), link down`
+  - In `bsd/dev/topaz_sta.c`, `MiniIONetworkStackStart()` was called during boot (`topaz_sta_init`), but `redwood_net_attach(&sta_link)` was deferred to `topaz_wlan_ready_hook = sta_ready`, which only ran ~1.5 seconds later when the Hexagon modem finished firmware loading.
+  - As a result, when `configd` opened `MiniIONetworkStack` at line 902, `en0` did not exist in the IORegistry. `configd` closed InterfaceNamer with 0 interfaces found (`Plugin:InterfaceNamer = *QUIET*`). When `Preferences.app` launched later, `SCNetworkInterfaceCopyAll()` returned empty, causing Settings to omit the Wi-Fi row completely.
+- **Fix Applied (Boot 23):**
+  - Updated `xnu/patches/0900-en0-Apple80211-for-wifid-over-the-Topaz.patch`:
+    - Moved `topaz_wlan_address()`, MAC assignment, `redwood_net_attach(&sta_link)`, and `redwood_sta_attach(&sta_ops)` into `topaz_sta_init()`, executed synchronously *before* `MiniIONetworkStackStart()`.
+    - In `sta_bring_up()`, only `topaz_wlan_rx_hook` and `topaz_wlan_link_hook` are hooked when modem DSP finishes booting.
+    - Verified all hunks with `tools/check-patch.py`.
+  - Applied the exact verified assembly patch to `xnu/out/kernel.development.sweet`:
+    - `0x52e030` (`topaz_sta_init`): calls `early_attach_and_start` before `MiniIONetworkStackStart`.
+    - `0x52e0a0` (`sta_bring_up`): registers hooks and terminates thread.
+    - `0x52e0bc` (`early_attach_and_start`): runs MAC setup, `redwood_net_attach`, `redwood_sta_attach`, and `MiniIONetworkStackStart`.
+    - `0x156e5b` & `0xb02b38`: registered as `IOEthernetInterface` and published as `"en0"`.
+    - Verified complete disassembly with `aarch64-linux-gnu-objdump`.
+  - Built `shim/out/payload-wifi.bin` and `shim/out/shim-boot.img` (17,633,280 bytes).
+  - Rebooted device from recovery to fastboot and booted image via `fastboot boot shim\out\shim-boot.img` (0.790s).
+- **Next concrete action:** User unlocks phone, opens **Settings (Pengaturan)**, and verifies the **Wi-Fi** row is visible.
+
 ### >>> UPDATE 2026-10-28 00:20 (🎉 Boot 22 Executed: IOEthernetInterface & Service "en0" Applied) <<<
 - **Discovery: Why Control Center Showed Wi-Fi but Settings (`Preferences.app`) Did Not:**
   - Control Center communicates directly with `wifid` / `MobileWiFi.framework` via Mach IPC, using BSD socket ioctls on `en0`, which were fully operational and scanning.
