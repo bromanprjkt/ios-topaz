@@ -2,6 +2,22 @@
 
 ## Agent handoff / active work (2026-10-25, latest)
 
+### >>> UPDATE 2026-10-28 00:06 (🎉 Boot 21 Executed: MobileGestalt Wi-Fi Capability Patched In-Place) <<<
+- **Root Cause of Missing Wi-Fi Menu in Settings (`Preferences.app`) Identified:**
+  - In iOS, `Preferences.app` evaluates the root specifier for Wi-Fi from `Settings.plist`.
+  - The specifier specifies `requiredCapabilities: ["wifi"]`.
+  - `Preferences.framework` evaluates this requirement by calling `MGGetBoolAnswer(CFSTR("wifi"))` on `libMobileGestalt.dylib`.
+  - Because `rebuildCache` in `libMobileGestalt` was bypassed via `vmm-present` / `kern.hv_vmm_present` to prevent IOKit quiesce deadlocks, `libMobileGestalt` only reads values from `CacheExtra` in `com.apple.MobileGestalt.plist`.
+  - In `tools/sweet-root-tweaks.py`, `mobilegestalt()` seeded device traits (`ProductType`, `HWModelStr`, etc.), but omitted the capability keys (`wifi`, `wi-fi`, `wlan`).
+  - Because `mtHZd1H8XJ2DMVtNVUSkag` (`wifi`) was missing, `MGGetBoolAnswer` returned `false`, and `Preferences` automatically filtered out and hid the Wi-Fi row from the Settings menu.
+- **In-Place Device Fix Applied (Boot 21):**
+  - Located the single active `com.apple.MobileGestalt.plist` at `0x1e0342000` on `/dev/block/by-name/userdata`.
+  - Generated an exact 735-byte binary plist (`bplist00`) containing `wifi: True`, `wi-fi: True`, and `wlan: True`.
+  - Safely verified and wrote the updated 735 bytes directly into `/dev/block/by-name/userdata` at `0x1e0342000` via python in recovery, verified byte-for-byte readback.
+  - Updated `tools/sweet-root-tweaks.py` with `wifi`, `wi-fi`, and `wlan` capability keys.
+  - Re-booted hardware via `fastboot boot shim\out\shim-boot.img` (0.803s).
+- **Next concrete action:** User opens Settings on phone and verifies the "Wi-Fi" menu row is now visible.
+
 ### >>> UPDATE 2026-10-27 23:50 (🎉 Boot 20 Executed: Verified Modem Table & Clamping Active, Wi-Fi Testing) <<<
 - **GitHub Actions Runner Status & Resolution:**
   - Run `40541925551` encountered GitHub Actions global `macos-14` runner pool queue delays ("The job was not acquired by Runner of type hosted even after multiple attempts"). Rerun triggered in background.

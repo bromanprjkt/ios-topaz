@@ -125,6 +125,9 @@ def mobilegestalt(root):
         mg_key('HomeButtonType'): 2,
         mg_key('MainScreenScale'): 3.0,
         mg_key('MainScreenPitch'): 458.0,
+        mg_key('wifi'): True,
+        mg_key('wi-fi'): True,
+        mg_key('wlan'): True,
         mg_key('ArtworkTraits'): {
             'ArtworkScaleFactor': 3,
             'ArtworkDeviceDisplayGamut': 0,
