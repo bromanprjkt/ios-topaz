@@ -2,6 +2,22 @@
 
 ## Agent handoff / active work (2026-10-25, latest)
 
+### >>> UPDATE 2026-10-27 23:50 (🎉 Boot 20 Executed: Verified Modem Table & Clamping Active, Wi-Fi Testing) <<<
+- **GitHub Actions Runner Status & Resolution:**
+  - Run `40541925551` encountered GitHub Actions global `macos-14` runner pool queue delays ("The job was not acquired by Runner of type hosted even after multiple attempts"). Rerun triggered in background.
+  - Meanwhile, applied the exact verified 28-entry `modem_b` table and `fw_read()` clamping (`mov x21, x22; b 0xaec85c`) directly into `xnu/out/kernel.development.sweet`, identical to the source patch `0115`.
+  - Disassembly verified at `0xaec7d8-0xaec7f0` with `aarch64-linux-gnu-objdump`:
+    `cmp x21, x22; b.ls 0xaec85c; mov x21, x22; b 0xaec85c`.
+- **Boot Image Assembled & Booted to Hardware (Boot 20):**
+  - Built `shim/out/payload-wifi.bin` and `shim/out/shim-boot.img` (17,633,280 bytes) with full cmdline:
+    `debug=0xc serial=3 cpus=4 keepsyms=1 -noprogress rd=ufsroot0 unentitled_ios_sim_launch=1 ignition_level=1 wdt_test=no_user_checkin ufsrw=1 rootrw=1 launchd_unsecure_cache=1 wdt=-1 sweetfb_noconsole=1 sweetfb_hz=30 sweettouchdelay=2 sweettouchirq=0 modem=1 wifi=1 modem_part=modem_b`
+  - Booted device via `& "C:\Program Files (x86)\Minimal ADB and Fastboot\fastboot.exe" boot shim\out\shim-boot.img` (0.802s).
+- **Next concrete action:** User observes device boot and checks:
+  1. Wi-Fi menu appearing in Settings.
+  2. Wi-Fi scan showing available SSIDs.
+  3. Association to network (DHCP IP acquisition).
+  4. Settings > General > About.
+
 ### >>> UPDATE 2026-10-26 17:45 (Topaz Modem Table Fix: Corrected Offsets/Sizes & Clamped Buffer in Patch 0115) <<<
 - **Boot 19 Root Cause Identified:**
   - Preferences and SpringBoard booted up cleanly, but Wi-Fi did not appear in Settings.
