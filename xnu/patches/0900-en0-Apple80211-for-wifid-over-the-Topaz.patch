@@ -1590,7 +1590,7 @@ new file mode 100644
 index 0000000..f2ffed4
 --- /dev/null
 +++ b/bsd/dev/topaz_sta.c
-@@ -0,0 +1,227 @@
+@@ -0,0 +1,240 @@
 +/*
 + * topaz: the station side of sys/redwood_sta.h over the WCN3988 radio of TopazModem.cpp
 + * (iokit/Kernel/arm/TopazModem.cpp: its C API, topaz_wlan_*). When the radio is up, en0 is
@@ -1785,6 +1785,22 @@ index 0000000..f2ffed4
 +	.poll = NULL,
 +};
 +
++extern void IOSleep(unsigned milliseconds);
++
++static void
++sta_attach_thread(__unused void *arg, __unused wait_result_t wr)
++{
++	IOSleep(500);
++	topaz_wlan_address(sta_link.address);
++	memcpy(sta_ops.address, sta_link.address, 6);
++	if (redwood_net_attach(&sta_link)) {
++		redwood_sta_attach(&sta_ops);
++		printf("topaz wifi: en0 and the station are up for iOS\n");
++	}
++	MiniIONetworkStackStart();
++	thread_terminate(current_thread());
++}
++
 +/* from the modem thread, once the radio is up: keep it short, the work goes on a thread */
 +static void
 +sta_bring_up(__unused void *arg, __unused wait_result_t wr)
@@ -1809,14 +1825,11 @@ index 0000000..f2ffed4
 +void
 +topaz_sta_init(void)
 +{
-+	topaz_wlan_address(sta_link.address);
-+	memcpy(sta_ops.address, sta_link.address, 6);
-+	if (redwood_net_attach(&sta_link)) {
-+		redwood_sta_attach(&sta_ops);
-+		printf("topaz wifi: en0 and the station are up for iOS\n");
-+	}
-+	MiniIONetworkStackStart();              /* configd waits for it before it calls the registry quiet */
++	thread_t thread;
 +	topaz_wlan_ready_hook = sta_ready;
++	if (kernel_thread_start(sta_attach_thread, NULL, &thread) == KERN_SUCCESS) {
++		thread_deallocate(thread);
++	}
 +}
 diff --git a/bsd/sys/redwood_input.h b/bsd/sys/redwood_input.h
 new file mode 100644

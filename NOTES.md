@@ -2,6 +2,34 @@
 
 ## Agent handoff / active work (2026-10-25, latest)
 
+### >>> UPDATE 2026-10-28 01:25 (🎉 Boot 24: Deferred Kernel Thread for en0 Attachment Resolves Missing Wi-Fi in Settings Without Kernel Panic) <<<
+- **Post-Mortem: Why Boot 23 Kernel Panicked:**
+  - In Boot 23, `redwood_net_attach(&sta_link)` was called synchronously inside `topaz_sta_init()`.
+  - `topaz_sta_init()` is called from `SweetFramebuffer.cpp` inside `AppleCLCD::start()` at boot line 101.
+  - At line 101, the BSD Data Link Interface Layer (`dlil_init`, lines 127-128) has not yet run.
+  - Calling `ifnet_attach()` before `dlil_init` attempted to queue work to uninitialized DLIL thread queues, resulting in an immediate kernel panic on screen.
+- **Root Cause of Missing Wi-Fi Menu in Settings (`Preferences.app`):**
+  - Control Center communicates directly with `wifid` / BSD socket ioctls on `en0`, so it displays Wi-Fi and scans.
+  - Settings (`Preferences.app`) queries `SystemConfiguration.framework` (`SCNetworkInterfaceCopyAll`).
+  - When `configd` launched at line 598 and opened `MiniIONetworkStack` at line 903, `en0` had not yet been attached (it was attached ~1.5s later at line 1282 when Hexagon modem DSP finished booting).
+  - As a result, `configd` registered 0 interfaces (`Plugin:InterfaceNamer = *QUIET*`). Settings subsequently received an empty interface list from `SCNetworkInterfaceCopyAll()` and hid the Wi-Fi row.
+- **Fix Applied (Boot 24):**
+  - Updated `bsd/dev/topaz_sta.c` in `xnu/patches/0900-en0-Apple80211-for-wifid-over-the-Topaz.patch`:
+    - `topaz_sta_init()` spawns a dedicated kernel thread `sta_attach_thread` via `kernel_thread_start()` and returns immediately (so `AppleCLCD::start()` completes without delay).
+    - `sta_attach_thread` calls `IOSleep(500)`. During this 500ms, `dlil_init` (line 127) and `sweet_ufs` (line 134) complete cleanly.
+    - After 500ms (at ~line 140-150, safely before `launchd` and line 598 `configd`), `sta_attach_thread` executes `topaz_wlan_address()`, `redwood_net_attach(&sta_link)` (registering `IOEthernetInterface` and `IO80211Controller`), `redwood_sta_attach(&sta_ops)`, and `MiniIONetworkStackStart()`, then terminates.
+    - In `sta_bring_up()` (called when Hexagon modem DSP boots at line 1282), `topaz_wlan_rx_hook = sta_rx` and `topaz_wlan_link_hook = sta_link_changed` are connected.
+    - Verified all patch hunks with `tools/check-patch.py`.
+  - Applied the verified assembly implementation directly to `xnu/out/kernel.development.sweet`:
+    - `0x52e030` (`topaz_sta_init`): sets `ready_hook = sta_ready`, spawns `sta_attach_thread`, deallocates thread handle, returns.
+    - `0x52e074` (`sta_ready`): spawns `sta_bring_up` when modem DSP ready hook fires.
+    - `0x52e0ac` (`sta_bring_up`): hooks `sta_rx` and `sta_link_changed`, calls `thread_terminate(current_thread())`.
+    - `0x52e0c8` (`sta_attach_thread`): calls `IOSleep(500)`, calls `topaz_wlan_address`, copies MAC, calls `redwood_net_attach`, calls `redwood_sta_attach`, calls `MiniIONetworkStackStart`, calls `thread_terminate(current_thread())`.
+    - `0x156e5b` & `0xb02b38`: registered as `IOEthernetInterface` and published as `"en0"`.
+    - Disassembly verified with `aarch64-linux-gnu-objdump`.
+  - Rebuilt `shim/out/payload-wifi.bin` and `shim/out/shim-boot.img` (17,633,280 bytes).
+- **Next concrete action:** Boot image to hardware via fastboot, unlock phone, open Settings, and verify the Wi-Fi row appears.
+
 ### >>> UPDATE 2026-10-28 00:42 (🎉 Boot 23 Executed: Early en0 Attachment Before configd Resolved Missing Wi-Fi Menu) <<<
 - **Root Cause of Missing Wi-Fi Menu in Settings (`Preferences.app`):**
   - MobileGestalt on userdata (`com.apple.MobileGestalt.plist` at `0x1e0342000`) was verified to contain `mtHZd1H8XJ2DMVtNVUSkag: True` (`wifi`), so MG capability checks pass.
