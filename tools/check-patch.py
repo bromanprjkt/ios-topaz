@@ -22,7 +22,7 @@ def check_patch(filename):
             actual_new = 0
             while i < len(lines):
                 hl = lines[i]
-                if hl.startswith('diff --git') or hunk_regex.match(hl):
+                if hl.startswith('diff --git') or hunk_regex.match(hl) or hl == '-- \n' or hl.startswith('-- '):
                     break
                 if hl.startswith('\\ No newline'):
                     i += 1

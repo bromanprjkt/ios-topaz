@@ -2,6 +2,18 @@
 
 ## Agent handoff / active work (2026-10-25, latest)
 
+### >>> UPDATE 2026-10-26 17:45 (Topaz Modem Table Fix: Corrected Offsets/Sizes & Clamped Buffer in Patch 0115) <<<
+- **Boot 19 Root Cause Identified:**
+  - Preferences and SpringBoard booted up cleanly, but Wi-Fi did not appear in Settings.
+  - Log revealed modem failure: `TopazModem: modem.b12: not in the table or too big (926224)` followed by shutdown.
+  - In patch 0115, `modem.b12` size was specified as 926,224 bytes (`0xe2210`) whereas the ELF request `max` was 926,192 bytes (`0xe21f0`).
+  - Verified exact offsets, sizes, and CRC32s across all 28 modem firmware files directly from device `/dev/block/by-name/modem_b`.
+- **Fix Applied in `xnu/patches/0115-topaz-modem-fw-from-modem-a.patch`:**
+  - Updated `fw_files[]` with exact modem_b offsets, sizes (e.g. `modem.b12` = `0xe21f0`, `modem.b16` = `0x215e000`, etc.), and CRCs.
+  - In `fw_read()`, clamped `to_read = min(fw_files[i].size, max)` and used `to_read` for `sweet_ufs_read_part()` and `crc32()` so segment size disparities never trigger fatal aborts.
+  - Verified patch 0115 unified diff syntax via `tools/check-patch.py`.
+- **Next concrete action:** Push commit to trigger GitHub Actions build, download kernel, rebuild shim-boot.img, and boot to device.
+
 ### >>> UPDATE 2026-10-26 17:20 (🎉 CI 40304549738 Succeeded & Booted: Patch 0900 Applied, Wi-Fi Restored & Link State Wired) <<<
 - **GitHub Actions Kernel Build 40304549738:**
   - Completed successfully in 5m4s (commit `4354bf4`).
